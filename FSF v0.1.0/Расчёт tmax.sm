@@ -1,0 +1,213 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<?application progid="SMath Studio настольная" version="1.1.8763.0"?>
+<worksheet xmlns="http://smath.info/schemas/worksheet/1.0">
+  <settings ppi="96">
+    <identity>
+      <id>14150f99-6747-45c2-a222-27abdd3ea884</id>
+      <revision>21</revision>
+    </identity>
+    <metadata lang="rus">
+      <author>Umakhan</author>
+    </metadata>
+    <calculation>
+      <precision>4</precision>
+      <exponentialThreshold>5</exponentialThreshold>
+      <trailingZeros>false</trailingZeros>
+      <significantDigitsMode>false</significantDigitsMode>
+      <roundingMode>0</roundingMode>
+      <approximateEqualAccuracy>0</approximateEqualAccuracy>
+      <fractions>decimal</fractions>
+    </calculation>
+    <pageModel active="false" viewMode="2" printGrid="false" printAreas="true" simpleEqualsOnly="false" printBackgroundImages="true">
+      <paper id="9" orientation="Portrait" width="827" height="1169" />
+      <margins left="39" right="39" top="49" bottom="49" />
+      <header alignment="Center" color="#a9a9a9">&amp;[DATE] &amp;[TIME] - &amp;[FILENAME]</header>
+      <footer alignment="Center" color="#a9a9a9">&amp;[PAGENUM] / &amp;[COUNT]</footer>
+      <backgrounds />
+    </pageModel>
+    <dependencies>
+      <assembly name="SMath Studio настольная" version="1.1.8763.0" guid="a37cba83-b69c-4c71-9992-55ff666763bd" />
+      <assembly name="MathRegion" version="1.11.8763.0" guid="02f1ab51-215b-466e-a74d-5d8b1cf85e8d" />
+      <assembly name="SpecialFunctions" version="1.12.8763.0" guid="2814e667-4e12-48b1-8d51-194e480eabc5" />
+    </dependencies>
+  </settings>
+  <regions type="content">
+    <region left="0" top="0" width="53" height="27" color="#000000" fontSize="12">
+      <math>
+        <description active="true" position="Right" lang="eng">
+          <content>
+            <p>коэффициент, учитывающий отличие фактической площади горючей <br />нагрузки в помещении и площади помещения. <br />Для помещений классов функциональной пожарной опасности <br />Ф1 - Ф4 следует принимать равным 2</p>
+          </content>
+        </description>
+        <input>
+          <e type="operand">k</e>
+          <e type="operand">2</e>
+          <e type="operator" args="2">:</e>
+        </input>
+      </math>
+    </region>
+    <region left="0" top="72" width="101" height="27" color="#000000" fontSize="12">
+      <math>
+        <description active="true" position="Right" lang="eng">
+          <content>
+            <p>площадь помещения с очагом пожара, м2</p>
+          </content>
+        </description>
+        <input>
+          <e type="operand">Fпом</e>
+          <e type="operand">450</e>
+          <e type="operator" args="2">:</e>
+        </input>
+      </math>
+    </region>
+    <region left="0" top="99" width="101" height="27" color="#000000" fontSize="12">
+      <math>
+        <description active="true" position="Right" lang="eng">
+          <content>
+            <p>линейная скорость растространения пламени, м/с</p>
+          </content>
+        </description>
+        <input>
+          <e type="operand">v</e>
+          <e type="operand">0.0055</e>
+          <e type="operator" args="2">:</e>
+        </input>
+      </math>
+    </region>
+    <region left="0" top="126" width="259" height="61" border="true" color="#000000" fontSize="12">
+      <math>
+        <description active="true" position="Right" lang="eng">
+          <content>
+            <p>Время охвата пожаром всей поверхности <br />горючей нагрузки в помещении</p>
+          </content>
+        </description>
+        <input>
+          <e type="operand">tmax</e>
+          <e type="operand">k</e>
+          <e type="operand">Fпом</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand">π</e>
+          <e type="operand">v</e>
+          <e type="operand">2</e>
+          <e type="operator" args="2">^</e>
+          <e type="operator" args="2">*</e>
+          <e type="operator" args="2">/</e>
+          <e type="function" args="1">sqrt</e>
+          <e type="operator" args="2">:</e>
+        </input>
+        <result action="numeric">
+          <e type="operand">3077.3977</e>
+        </result>
+      </math>
+    </region>
+    <region left="0" top="189" width="110" height="27" color="#000000" fontSize="12">
+      <math>
+        <description active="true" position="Right" lang="eng">
+          <content>
+            <p>удельная скорость выгорания (для жидкостей установившаяся), кг/(с·м2)</p>
+          </content>
+        </description>
+        <input>
+          <e type="operand">ψуд</e>
+          <e type="operand">0.015</e>
+          <e type="operator" args="2">:</e>
+        </input>
+      </math>
+    </region>
+    <region left="0" top="225" width="249" height="39" color="#000000" fontSize="12">
+      <math>
+        <description active="true" position="Right" lang="eng">
+          <content>
+            <p>Зависимость скорости выгорания  (кг/с) <br />от времени</p>
+          </content>
+        </description>
+        <input>
+          <e type="operand">Ψ</e>
+          <e type="operand">ψуд</e>
+          <e type="operand">π</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand">v</e>
+          <e type="operand">2</e>
+          <e type="operator" args="2">^</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand">tmax</e>
+          <e type="operand">2</e>
+          <e type="operator" args="2">^</e>
+          <e type="operator" args="2">*</e>
+          <e type="operator" args="2">:</e>
+        </input>
+        <result action="numeric">
+          <e type="operand">13.5</e>
+        </result>
+      </math>
+    </region>
+    <region left="0" top="306" width="217" height="41" color="#000000" fontSize="12">
+      <math>
+        <description active="true" position="Right" lang="eng">
+          <content>
+            <p>Требуемая площадь поверхности очага пожара на твёрдом теле, м2</p>
+          </content>
+        </description>
+        <input>
+          <e type="operand">Sтт</e>
+          <e type="operand">π</e>
+          <e type="operand">v</e>
+          <e type="operand">tmax</e>
+          <e type="operator" args="2">*</e>
+          <e type="bracket">(</e>
+          <e type="operand">2</e>
+          <e type="operator" args="2">^</e>
+          <e type="operator" args="2">*</e>
+          <e type="operator" args="2">:</e>
+        </input>
+        <result action="numeric">
+          <e type="operand">900</e>
+        </result>
+      </math>
+    </region>
+    <region left="0" top="351" width="82" height="27" color="#000000" fontSize="12">
+      <math>
+        <description active="true" position="Right" lang="eng">
+          <content>
+            <p>Фактическая площадь поверхности очага пожара на твёрдом теле, м2</p>
+          </content>
+        </description>
+        <input>
+          <e type="operand">Sоф</e>
+          <e type="operand">12</e>
+          <e type="operator" args="2">:</e>
+        </input>
+      </math>
+    </region>
+    <region left="0" top="396" width="676" height="42" color="#000000" fontSize="12">
+      <math>
+        <description active="true" position="Top" lang="eng">
+          <content>
+            <p>Мультипликатор площади, который подставляется в значение AREA_MULTIPLIER</p>
+          </content>
+        </description>
+        <input>
+          <e type="operand">Sп</e>
+          <e type="operand">Sп</e>
+          <e type="operand">Sоф</e>
+          <e type="operand">AREA_MULTIPLIER</e>
+          <e type="operator" args="2">*</e>
+          <e type="operator" args="2">:</e>
+          <e type="bracket">(</e>
+          <e type="operand">900</e>
+          <e type="operator" args="2">≡</e>
+          <e type="operand">AREA_MULTIPLIER</e>
+          <e type="operand">0</e>
+          <e type="operand">10</e>
+          <e type="operand">6</e>
+          <e type="operator" args="2">^</e>
+          <e type="function" args="4">solve</e>
+          <e type="operator" args="2">:</e>
+        </input>
+        <result action="numeric">
+          <e type="operand">75</e>
+        </result>
+      </math>
+    </region>
+  </regions>
+</worksheet>
