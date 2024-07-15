@@ -4,7 +4,7 @@
   <settings ppi="96">
     <identity>
       <id>14150f99-6747-45c2-a222-27abdd3ea884</id>
-      <revision>21</revision>
+      <revision>24</revision>
     </identity>
     <metadata lang="rus">
       <author>Umakhan</author>
@@ -41,12 +41,12 @@
         </description>
         <input>
           <e type="operand">k</e>
-          <e type="operand">2</e>
+          <e type="operand">4</e>
           <e type="operator" args="2">:</e>
         </input>
       </math>
     </region>
-    <region left="0" top="72" width="101" height="27" color="#000000" fontSize="12">
+    <region left="0" top="72" width="139" height="27" color="#000000" fontSize="12">
       <math>
         <description active="true" position="Right" lang="eng">
           <content>
@@ -55,7 +55,7 @@
         </description>
         <input>
           <e type="operand">Fпом</e>
-          <e type="operand">450</e>
+          <e type="operand">910.415</e>
           <e type="operator" args="2">:</e>
         </input>
       </math>
@@ -69,7 +69,7 @@
         </description>
         <input>
           <e type="operand">v</e>
-          <e type="operand">0.0055</e>
+          <e type="operand">0.0068</e>
           <e type="operator" args="2">:</e>
         </input>
       </math>
@@ -96,11 +96,11 @@
           <e type="operator" args="2">:</e>
         </input>
         <result action="numeric">
-          <e type="operand">3077.3977</e>
+          <e type="operand">5006.8646</e>
         </result>
       </math>
     </region>
-    <region left="0" top="189" width="110" height="27" color="#000000" fontSize="12">
+    <region left="0" top="189" width="120" height="27" color="#000000" fontSize="12">
       <math>
         <description active="true" position="Right" lang="eng">
           <content>
@@ -109,12 +109,12 @@
         </description>
         <input>
           <e type="operand">ψуд</e>
-          <e type="operand">0.015</e>
+          <e type="operand">0.0233</e>
           <e type="operator" args="2">:</e>
         </input>
       </math>
     </region>
-    <region left="0" top="225" width="249" height="39" color="#000000" fontSize="12">
+    <region left="0" top="225" width="278" height="39" color="#000000" fontSize="12">
       <math>
         <description active="true" position="Right" lang="eng">
           <content>
@@ -137,11 +137,11 @@
           <e type="operator" args="2">:</e>
         </input>
         <result action="numeric">
-          <e type="operand">13.5</e>
+          <e type="operand">84.8507</e>
         </result>
       </math>
     </region>
-    <region left="0" top="306" width="217" height="41" color="#000000" fontSize="12">
+    <region left="0" top="306" width="256" height="41" color="#000000" fontSize="12">
       <math>
         <description active="true" position="Right" lang="eng">
           <content>
@@ -161,11 +161,11 @@
           <e type="operator" args="2">:</e>
         </input>
         <result action="numeric">
-          <e type="operand">900</e>
+          <e type="operand">3641.66</e>
         </result>
       </math>
     </region>
-    <region left="0" top="351" width="82" height="27" color="#000000" fontSize="12">
+    <region left="0" top="351" width="110" height="27" color="#000000" fontSize="12">
       <math>
         <description active="true" position="Right" lang="eng">
           <content>
@@ -174,12 +174,12 @@
         </description>
         <input>
           <e type="operand">Sоф</e>
-          <e type="operand">12</e>
+          <e type="operand">6.925</e>
           <e type="operator" args="2">:</e>
         </input>
       </math>
     </region>
-    <region left="0" top="396" width="676" height="42" color="#000000" fontSize="12">
+    <region left="0" top="396" width="736" height="42" color="#000000" fontSize="12">
       <math>
         <description active="true" position="Top" lang="eng">
           <content>
@@ -194,7 +194,7 @@
           <e type="operator" args="2">*</e>
           <e type="operator" args="2">:</e>
           <e type="bracket">(</e>
-          <e type="operand">900</e>
+          <e type="operand">Sтт</e>
           <e type="operator" args="2">≡</e>
           <e type="operand">AREA_MULTIPLIER</e>
           <e type="operand">0</e>
@@ -205,7 +205,7 @@
           <e type="operator" args="2">:</e>
         </input>
         <result action="numeric">
-          <e type="operand">75</e>
+          <e type="operand">525.8715</e>
         </result>
       </math>
     </region>
