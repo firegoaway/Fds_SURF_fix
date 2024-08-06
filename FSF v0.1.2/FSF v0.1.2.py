@@ -73,7 +73,7 @@ class FDSProcessorApp(tk.Tk):
                 else:
                     modified_lines.append(line)
 
-        with open(fds_path.replace('.fds', '_surf_fixed.fds'), 'w', encoding='utf-8') as file:
+        with open(fds_path.replace('.fds', '.fds'), 'w', encoding='utf-8') as file:
             file.writelines(modified_lines)
 
     def process_files(self):
@@ -86,7 +86,7 @@ class FDSProcessorApp(tk.Tk):
             if not MLRPUA or not TAU_Q or not AREA_MULTIPLIER:
                 raise ValueError("Поля не должны быть пустыми")
             self.process_fds_file(fds_path, MLRPUA, TAU_Q, AREA_MULTIPLIER)
-            messagebox.showinfo("Готово!", f"Модифицированный .fds файл сохранён:\n\n{fds_path.replace('.fds', '_surf_fixed.fds')}")
+            messagebox.showinfo("Готово!", f"Модифицированный .fds файл сохранён:\n\n{fds_path.replace('.fds', '.fds')}")
         except Exception as e:
             messagebox.showerror("Ошибка", str(e))
 
