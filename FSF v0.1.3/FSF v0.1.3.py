@@ -7,13 +7,13 @@ from tkinter import filedialog, messagebox
 class FDSProcessorApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Fds SURF fix 0.1.0")
+        self.title("Fds SURF fix v0.1.3")
         
-        tk.Label(self, text="MLRPUA:").grid(row=0, column=0, padx=10, pady=5)
+        tk.Label(self, text="Удельная массовая скорость выгорания (MLRPUA):").grid(row=0, column=0, padx=10, pady=5)
         self.mlrpua_entry = tk.Entry(self)
         self.mlrpua_entry.grid(row=0, column=1, padx=10, pady=5)
 
-        tk.Label(self, text="TAU_Q:").grid(row=1, column=0, padx=10, pady=5)
+        tk.Label(self, text="Время полного охвата (TAU_Q):").grid(row=1, column=0, padx=10, pady=5)
         self.tau_q_entry = tk.Entry(self)
         self.tau_q_entry.grid(row=1, column=1, padx=10, pady=5)
 
@@ -21,7 +21,7 @@ class FDSProcessorApp(tk.Tk):
         self.area_multiplier_entry = tk.Entry(self)
         self.area_multiplier_entry.grid(row=2, column=1, padx=10, pady=5)
 
-        self.process_button = tk.Button(self, text="Process", command=self.process_files)
+        self.process_button = tk.Button(self, text="Заменить", command=self.process_files)
         self.process_button.grid(row=3, columnspan=2, pady=10)
 
     def read_ini_file(self, ini_file):
@@ -86,7 +86,7 @@ class FDSProcessorApp(tk.Tk):
             if not MLRPUA or not TAU_Q or not AREA_MULTIPLIER:
                 raise ValueError("Поля не должны быть пустыми")
             self.process_fds_file(fds_path, MLRPUA, TAU_Q, AREA_MULTIPLIER)
-            messagebox.showinfo("Готово!", f"Модифицированный .fds файл сохранён:\n\n{fds_path.replace('.fds', '.fds')}")
+            # messagebox.showinfo("Готово!", f"Модифицированный .fds файл сохранён:\n\n{fds_path.replace('.fds', '.fds')}")
         except Exception as e:
             messagebox.showerror("Ошибка", str(e))
 
