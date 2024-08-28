@@ -242,6 +242,7 @@ class FDSProcessorApp(tk.Tk):
                 raise ValueError("Поля не должны быть пустыми")
             self.process_fds_file(fds_path, MLRPUA, TAU_Q, AREA_MULTIPLIER)
             messagebox.showinfo("Готово!", f"Модифицированный .fds файл сохранён:\n\n{fds_path.replace('.fds', '.fds')}")
+            # app.quit() # Закрыть окно GUI после сохранения
         except Exception as e:
             messagebox.showerror("Ошибка", str(e))
 
