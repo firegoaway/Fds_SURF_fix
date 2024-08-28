@@ -1,7 +1,6 @@
 old_versions/
 dist/
 ./build
-.gitpics/
 *.exe
 *.docx
 *.ico
