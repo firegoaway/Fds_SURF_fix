@@ -35,7 +35,7 @@ class Tooltip:
 class FDSProcessorApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("FDS SURF FIX v0.1.6")
+        self.title("FDS SURF FIX v0.1.7")
         self.iconbitmap('.gitpics\\fsf.ico')
         self.wm_iconbitmap('.gitpics\\fsf.ico')
         
@@ -200,11 +200,11 @@ class FDSProcessorApp(tk.Tk):
                         hrrpua_found = True
                         inside_surf_block = True
                         # Вносим изменения в строчку &SURF
-                        modified_lines.append(f"&SURF ID='{surf_id}',\n")
-                        modified_lines.append(f"      MLRPUA={MLRPUA},\n")
-                        modified_lines.append(f"      COLOR='RED',\n")
-                        modified_lines.append(f"      TAU_Q={TAU_Q},\n")
-                        modified_lines.append(f"      AREA_MULTIPLIER={AREA_MULTIPLIER}/\n")
+                        modified_lines.append(f"&SURF ID='{surf_id}',\s")
+                        modified_lines.append(f"MLRPUA={MLRPUA},\s")
+                        modified_lines.append(f"COLOR='RED',\s")
+                        modified_lines.append(f"TAU_Q={TAU_Q}/\n")
+                        # modified_lines.append(f"AREA_MULTIPLIER={AREA_MULTIPLIER}/\n") # Больше нет необходимости добавлять мультипликатор
                     else:
                         # Если строчка &SURF без HRRPUA, то пропускаем её
                         hrrpua_found = False
