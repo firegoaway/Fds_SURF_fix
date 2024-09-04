@@ -35,9 +35,14 @@ class Tooltip:
 class FDSProcessorApp(tk.Tk):
     def __init__(self):
         super().__init__()
+        
+        current_directory = os.path.dirname(__file__)
+        parent_directory = os.path.abspath(os.path.join(current_directory, os.pardir))
+        icon_path = os.path.join(parent_directory, '.gitpics', 'fsf.ico')
+        
         self.title("FDS SURF FIX v0.1.7")
-        self.iconbitmap('.gitpics\\fsf.ico')
-        self.wm_iconbitmap('.gitpics\\fsf.ico')
+        self.iconbitmap(icon_path)
+        self.wm_iconbitmap(icon_path)
         
         # Завезли тултипсы
         tk.Label(self, text="k:").grid(row=0, column=0, padx=10, pady=5)
@@ -50,6 +55,7 @@ class FDSProcessorApp(tk.Tk):
         self.fpom_entry.grid(row=1, column=1, padx=10, pady=5)
         Tooltip(self.fpom_entry, "Площадь помещения с очагом пожара, м2")
 
+        self.v = None
         tk.Label(self, text="v:").grid(row=2, column=0, padx=10, pady=5)
         self.v_entry = tk.Entry(self)
         self.v_entry.grid(row=2, column=1, padx=10, pady=5)
@@ -95,7 +101,12 @@ class FDSProcessorApp(tk.Tk):
         self.load_from_ini()  # Загружаем данные из INI
 
     def load_from_ini(self):
-        ini_file = 'IniApendix1.ini'
+        current_directory = os.path.dirname(__file__)
+        parent_directory = os.path.abspath(os.path.join(current_directory, os.pardir))
+        inis_path = os.path.join(parent_directory, 'inis')
+        
+        ini_file = os.path.join(inis_path, 'IniApendix1.ini')
+        
         if os.path.exists(ini_file):
             config = configparser.ConfigParser()
             config.read(ini_file)
@@ -167,8 +178,14 @@ class FDSProcessorApp(tk.Tk):
             'Stt': Stt,
             'AREA_MULTIPLIER': AREA_MULTIPLIER
         }
+        
+        current_directory = os.path.dirname(__file__)
+        parent_directory = os.path.abspath(os.path.join(current_directory, os.pardir))
+        inis_path = os.path.join(parent_directory, 'inis')
+        
+        ini_file = os.path.join(inis_path, 'IniApendix1.ini')
 
-        with open('IniApendix1.ini', 'w') as configfile:
+        with open(ini_file, 'w') as configfile:
             config.write(configfile)
 
     def read_ini_file(self, ini_file):
@@ -194,15 +211,16 @@ class FDSProcessorApp(tk.Tk):
 
                     inside_surf_block = True
                     vent_seen = False
+                    v = self.v_entry.get()
                     
                     # Проверяем наличие параметра HRRPUA в строчке &SURF
                     if 'HRRPUA' in line:
                         hrrpua_found = True
                         inside_surf_block = True
                         # Вносим изменения в строчку &SURF
-                        modified_lines.append(f"&SURF ID='{surf_id}',\s")
-                        modified_lines.append(f"MLRPUA={MLRPUA},\s")
-                        modified_lines.append(f"COLOR='RED',\s")
+                        modified_lines.append(f"&SURF ID='{surf_id}', ")
+                        modified_lines.append(f"MLRPUA={MLRPUA}, ")
+                        modified_lines.append(f"COLOR='RED', ")
                         modified_lines.append(f"TAU_Q={TAU_Q}/\n")
                         # modified_lines.append(f"AREA_MULTIPLIER={AREA_MULTIPLIER}/\n") # Больше нет необходимости добавлять мультипликатор
                     else:
@@ -213,7 +231,7 @@ class FDSProcessorApp(tk.Tk):
                 
                 if inside_surf_block and hrrpua_found:
                     if line.startswith('&VENT'):
-                        line = re.sub(r"CTRL_ID='[^']*'\s*", "", line)
+                        line = re.sub(r"CTRL_ID='[^']*'\s*", f"SPREAD_RATE={v}", line)
                         modified_lines.append(line)
                         vent_seen = True
                         continue
@@ -232,7 +250,12 @@ class FDSProcessorApp(tk.Tk):
             file.writelines(modified_lines)
 
     def process_files(self):
-        ini_path = 'filePath.ini'
+        current_directory = os.path.dirname(__file__)
+        parent_directory = os.path.abspath(os.path.join(current_directory, os.pardir))
+        inis_path = os.path.join(parent_directory, 'inis')
+        
+        ini_path = os.path.join(inis_path, 'filePath.ini')
+        
         try:
             fds_path = self.read_ini_file(ini_path)
             MLRPUA = self.psyd_entry.get()
@@ -242,7 +265,7 @@ class FDSProcessorApp(tk.Tk):
                 raise ValueError("Поля не должны быть пустыми")
             self.process_fds_file(fds_path, MLRPUA, TAU_Q, AREA_MULTIPLIER)
             messagebox.showinfo("Готово!", f"Модифицированный .fds файл сохранён:\n\n{fds_path.replace('.fds', '.fds')}")
-            # app.quit() # Закрыть окно GUI после сохранения
+            app.quit() # Закрыть окно GUI после сохранения
         except Exception as e:
             messagebox.showerror("Ошибка", str(e))
 
