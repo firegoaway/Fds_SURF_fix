@@ -260,7 +260,7 @@ class FDSProcessorApp(tk.Tk):
             fds_path = self.read_ini_file(ini_path)
             MLRPUA = self.psyd_entry.get()
             TAU_Q = float(self.tmax_entry.get()) # Значение tmax в GUI отображается положительным, а когда оно идёт в TAU_Q, то становится отрицательным, чтобы удовлетворить условия назначения переменной TAU_Q в FDS
-            TAU_Q = -(TAU_Q / log(TAU_Q))
+            TAU_Q = -(TAU_Q / log(TAU_Q**2))
             AREA_MULTIPLIER = self.area_multiplier_entry.get()
             if not MLRPUA or not TAU_Q or not AREA_MULTIPLIER:
                 raise ValueError("Поля не должны быть пустыми")
