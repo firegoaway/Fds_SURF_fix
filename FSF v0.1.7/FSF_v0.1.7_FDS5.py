@@ -199,7 +199,8 @@ class FDSProcessorApp(tk.Tk):
         inside_surf_block = False
         vent_seen = False
         surf_id = None
-        hrrpua_found = False  # Индикатор наличия HRRPUA в строчке &SURF
+        hrrpua_found = False 
+        remove_ctrl_ramp = False
 
         with open(fds_path, 'r', encoding='utf-8') as file:
             lines = file.readlines()
@@ -213,39 +214,50 @@ class FDSProcessorApp(tk.Tk):
                     vent_seen = False
                     v = self.v_entry.get()
                     
-                    # Проверяем наличие параметра HRRPUA в строчке &SURF
                     if 'HRRPUA' in line:
                         hrrpua_found = True
                         inside_surf_block = True
-                        # Вносим изменения в строчку &SURF
                         modified_lines.append(f"&SURF ID='{surf_id}', ")
                         modified_lines.append(f"MLRPUA={MLRPUA}, ")
                         modified_lines.append(f"COLOR='RED', ")
                         modified_lines.append(f"TAU_Q={TAU_Q}/\n")
-                        # modified_lines.append(f"AREA_MULTIPLIER={AREA_MULTIPLIER}/\n") # Больше нет необходимости добавлять мультипликатор
                     else:
-                        # Если строчка &SURF без HRRPUA, то пропускаем её
                         hrrpua_found = False
                         modified_lines.append(line)
                     continue
-                
+
                 if inside_surf_block and hrrpua_found:
-                    if line.startswith('&VENT'):
-                        line = re.sub(r"CTRL_ID='[^']*'\s*", f"SPREAD_RATE={v}", line)
+                    if 'SPREAD_RATE' not in line:
+                        line = re.sub(r"CTRL_ID='[^']*'\s*", '', line)
+                        line = line.rstrip('\n') + f" SPREAD_RATE={v}\n"
+                    else:
+                        line = re.sub(r"CTRL_ID='[^']*'\s*", '', line)
                         modified_lines.append(line)
                         vent_seen = True
                         continue
-                    
-                    if '(end)' in line: # Если встречаем конец блока со строчкой &SURF
+
+                    if '(end)' in line:
                         inside_surf_block = False
-                        modified_lines.append(line)  # Оставляем без изменений
+                        modified_lines.append(line)
                         continue
-                    
+
                     continue
-            
+
+                if line.startswith('&OBST'):
+                    if 'CTRL_ID' in line:
+                        line = re.sub(r"CTRL_ID='[^']*'\s*", '', line)
+                        remove_ctrl_ramp = True
+
+                    modified_lines.append(line)
+                    continue
+
+                if remove_ctrl_ramp and (line.startswith('&CTRL') or line.startswith('&RAMP')):
+                    continue
+                else:
+                    remove_ctrl_ramp = False
+
                 modified_lines.append(line)
 
-        # Сохраняемся
         with open(fds_path.replace('.fds', '.fds'), 'w', encoding='utf-8') as file:
             file.writelines(modified_lines)
 
