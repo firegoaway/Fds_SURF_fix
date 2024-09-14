@@ -270,7 +270,7 @@ class FDSProcessorApp(tk.Tk):
         
         try:
             fds_path = self.read_ini_file(ini_path)
-            MLRPUA = self.psyd_entry.get()
+            MLRPUA = self.psy_entry.get()
             TAU_Q = -float(self.tmax_entry.get()) # Значение tmax в GUI отображается положительным, а когда оно идёт в TAU_Q, то становится отрицательным, чтобы удовлетворить условия назначения переменной TAU_Q в FDS
             AREA_MULTIPLIER = self.area_multiplier_entry.get()
             if not MLRPUA or not TAU_Q or not AREA_MULTIPLIER:
