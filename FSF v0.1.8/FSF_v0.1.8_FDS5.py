@@ -227,11 +227,10 @@ class FDSProcessorApp(tk.Tk):
                     continue
 
                 if inside_surf_block and hrrpua_found:
-                    if 'SPREAD_RATE' not in line:
+                    if line.startswith('&VENT'):
                         line = re.sub(r"CTRL_ID='[^']*'\s*", '', line)
-                        line = line.rstrip('\n') + f" SPREAD_RATE={v}\n"
-                    else:
-                        line = re.sub(r"CTRL_ID='[^']*'\s*", '', line)
+                        if 'SPREAD_RATE' not in line:
+                            line = line.rstrip('\n') + f" SPREAD_RATE={v}\n"
                         modified_lines.append(line)
                         vent_seen = True
                         continue
@@ -255,6 +254,9 @@ class FDSProcessorApp(tk.Tk):
                     continue
                 else:
                     remove_ctrl_ramp = False
+                    
+                if line.startswith('&ZONE'):
+                    continue
 
                 modified_lines.append(line)
 

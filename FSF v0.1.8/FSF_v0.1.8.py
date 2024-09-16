@@ -3,7 +3,7 @@ import os
 import re
 import tkinter as tk
 from tkinter import messagebox
-from math import sqrt, pi, log
+from math import sqrt, pi
 
 class Tooltip:
     """Создаёт всплывающие подсказки."""
@@ -227,11 +227,10 @@ class FDSProcessorApp(tk.Tk):
                     continue
 
                 if inside_surf_block and hrrpua_found:
-                    if 'SPREAD_RATE' not in line:
+                    if line.startswith('&VENT'):
                         line = re.sub(r"CTRL_ID='[^']*'\s*", '', line)
-                        line = line.rstrip('\n') + f" SPREAD_RATE={v}\n"
-                    else:
-                        line = re.sub(r"CTRL_ID='[^']*'\s*", '', line)
+                        if 'SPREAD_RATE' not in line:
+                            line = line.rstrip('\n') + f" SPREAD_RATE={v}\n"
                         modified_lines.append(line)
                         vent_seen = True
                         continue
@@ -270,10 +269,8 @@ class FDSProcessorApp(tk.Tk):
         
         try:
             fds_path = self.read_ini_file(ini_path)
-            #MLRPUA = self.psyd_entry.get()
             MLRPUA = self.psy_entry.get()
             TAU_Q = -float(self.tmax_entry.get()) # Значение tmax в GUI отображается положительным, а когда оно идёт в TAU_Q, то становится отрицательным, чтобы удовлетворить условия назначения переменной TAU_Q в FDS
-            #TAU_Q = -(TAU_Q / log(TAU_Q**2)) До сих пор неизвестно, влияет ли TAU_Q в FDS5 на SPREAD_RATE и HRR
             AREA_MULTIPLIER = self.area_multiplier_entry.get()
             if not MLRPUA or not TAU_Q or not AREA_MULTIPLIER:
                 raise ValueError("Поля не должны быть пустыми")
