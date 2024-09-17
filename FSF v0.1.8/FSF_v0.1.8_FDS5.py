@@ -40,7 +40,7 @@ class FDSProcessorApp(tk.Tk):
         parent_directory = os.path.abspath(os.path.join(current_directory, os.pardir))
         icon_path = os.path.join(parent_directory, '.gitpics', 'fsf.ico')
         
-        self.title("FDS SURF FIX v0.1.7")
+        self.title("FDS SURF FIX v0.1.8")
         self.iconbitmap(icon_path)
         self.wm_iconbitmap(icon_path)
         
