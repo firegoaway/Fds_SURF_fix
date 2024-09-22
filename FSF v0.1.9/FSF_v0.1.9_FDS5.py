@@ -40,7 +40,7 @@ class FDSProcessorApp(tk.Tk):
         parent_directory = os.path.abspath(os.path.join(current_directory, os.pardir))
         icon_path = os.path.join(parent_directory, '.gitpics', 'fsf.ico')
         
-        self.title("FDS SURF FIX v0.1.8")
+        self.title("FDS SURF FIX v0.1.9")
         self.iconbitmap(icon_path)
         self.wm_iconbitmap(icon_path)
         
@@ -66,10 +66,10 @@ class FDSProcessorApp(tk.Tk):
         self.psyd_entry.grid(row=3, column=1, padx=10, pady=5)
         Tooltip(self.psyd_entry, "Удельная массовая скорость выгорания (для жидкостей установившаяся), кг/(с*м2)")
 
-        tk.Label(self, text="Sof:").grid(row=4, column=0, padx=10, pady=5)
-        self.sof_entry = tk.Entry(self)
-        self.sof_entry.grid(row=4, column=1, padx=10, pady=5)
-        Tooltip(self.sof_entry, "Фактическая площадь поверхности очага пожара на твёрдом теле, м2")
+        #tk.Label(self, text="Sof:").grid(row=4, column=0, padx=10, pady=5)
+        #self.sof_entry = tk.Entry(self)
+        #self.sof_entry.grid(row=4, column=1, padx=10, pady=5)
+        #Tooltip(self.sof_entry, "Фактическая площадь поверхности очага пожара на твёрдом теле, м2")
 
         # Поля рассчитываемых значений (нередактируемые)
         tk.Label(self, text="tmax:").grid(row=5, column=0, padx=10, pady=5)
@@ -85,12 +85,12 @@ class FDSProcessorApp(tk.Tk):
         tk.Label(self, text="Stt:").grid(row=7, column=0, padx=10, pady=5)
         self.stt_entry = tk.Entry(self, state='readonly')
         self.stt_entry.grid(row=7, column=1, padx=10, pady=5)
-        Tooltip(self.stt_entry, "Требуемая площадь поверхности очага пожара на твёрдом теле, м2")
+        Tooltip(self.stt_entry, "Площадь поверхности горючей нагрузки в помещении, м2")
 
-        tk.Label(self, text="AREA_MULTIPLIER:").grid(row=8, column=0, padx=10, pady=5)
-        self.area_multiplier_entry = tk.Entry(self, state='readonly')
-        self.area_multiplier_entry.grid(row=8, column=1, padx=10, pady=5)
-        Tooltip(self.area_multiplier_entry, "Мультипликатор площади поверхности очага пожара. Переводит фактическую площадь поверхности очага пожара на твёрдом теле в требуемую согласно Приложению 1 Методики 1140")
+        #tk.Label(self, text="AREA_MULTIPLIER:").grid(row=8, column=0, padx=10, pady=5)
+        #self.area_multiplier_entry = tk.Entry(self, state='readonly')
+        #self.area_multiplier_entry.grid(row=8, column=1, padx=10, pady=5)
+        #Tooltip(self.area_multiplier_entry, "Мультипликатор площади поверхности очага пожара. Переводит фактическую площадь поверхности очага #пожара на твёрдом теле в требуемую согласно Приложению 1 Методики 1140")
 
         self.calculate_button = tk.Button(self, text="Рассчитать", command=self.calculate)
         self.calculate_button.grid(row=9, columnspan=2, pady=10)
@@ -116,12 +116,12 @@ class FDSProcessorApp(tk.Tk):
                 self.fpom_entry.insert(0, config['Calculations']['Fpom'])
                 self.v_entry.insert(0, config['Calculations']['v'])
                 self.psyd_entry.insert(0, config['Calculations']['psi_ud'])
-                self.sof_entry.insert(0, config['Calculations']['Sof'])
+                #self.sof_entry.insert(0, config['Calculations']['Sof'])
                 # Считываем нередактируемые данные
                 self.tmax_entry.insert(0, config['Calculations']['tmax'])
                 self.psy_entry.insert(0, config['Calculations']['Psi'])
                 self.stt_entry.insert(0, config['Calculations']['Stt'])
-                self.area_multiplier_entry.insert(0, config['Calculations']['AREA_MULTIPLIER'])
+                #self.area_multiplier_entry.insert(0, config['Calculations']['AREA_MULTIPLIER'])
             except KeyError as e:
                 messagebox.showwarning("Предупреждение", f"Значения не найдены: {e}")
 
@@ -131,13 +131,13 @@ class FDSProcessorApp(tk.Tk):
             Fpom = float(self.fpom_entry.get())
             v = float(self.v_entry.get())
             psi_ud = float(self.psyd_entry.get())
-            Sof = float(self.sof_entry.get())
+            #Sof = float(self.sof_entry.get())
 
             # Вычисляем tmax, Psi, Stt, AREA_MULTIPLIER
             tmax = sqrt((k * Fpom) / (pi * v**2))
             Psi = psi_ud * pi * v**2 * tmax**2
             Stt = pi * (v * tmax)**2
-            AREA_MULTIPLIER = Stt / Sof
+            #AREA_MULTIPLIER = Stt / Sof
 
             # Обновляем нередактируемые поля
             self.tmax_entry.config(state='normal')
@@ -155,28 +155,28 @@ class FDSProcessorApp(tk.Tk):
             self.stt_entry.insert(0, f"{Stt:.4f}")
             self.stt_entry.config(state='readonly')
 
-            self.area_multiplier_entry.config(state='normal')
-            self.area_multiplier_entry.delete(0, tk.END)
-            self.area_multiplier_entry.insert(0, f"{AREA_MULTIPLIER:.4f}")
-            self.area_multiplier_entry.config(state='readonly')
+            #self.area_multiplier_entry.config(state='normal')
+            #self.area_multiplier_entry.delete(0, tk.END)
+            #self.area_multiplier_entry.insert(0, f"{AREA_MULTIPLIER:.4f}")
+            #self.area_multiplier_entry.config(state='readonly')
 
-            self.save_to_ini(k, Fpom, v, psi_ud, Sof, tmax, Psi, Stt, AREA_MULTIPLIER)
+            self.save_to_ini(k, Fpom, v, psi_ud, tmax, Psi, Stt)
 
         except ValueError:
             messagebox.showerror("Ошибка", "Пожалуйста, введите допустимые положительные числа в поля ввода.")
 
-    def save_to_ini(self, k, Fpom, v, psi_ud, Sof, tmax, Psi, Stt, AREA_MULTIPLIER):
+    def save_to_ini(self, k, Fpom, v, psi_ud, tmax, Psi, Stt):
         config = configparser.ConfigParser()
         config['Calculations'] = {
             'k': k,
             'Fpom': Fpom,
             'v': v,
             'psi_ud': psi_ud,
-            'Sof': Sof,
+            #'Sof': Sof,
             'tmax': tmax,
             'Psi': Psi,
-            'Stt': Stt,
-            'AREA_MULTIPLIER': AREA_MULTIPLIER
+            'Stt': Stt
+            #'AREA_MULTIPLIER': AREA_MULTIPLIER
         }
         
         current_directory = os.path.dirname(__file__)
@@ -274,10 +274,10 @@ class FDSProcessorApp(tk.Tk):
             fds_path = self.read_ini_file(ini_path)
             MLRPUA = self.psy_entry.get()
             TAU_Q = -float(self.tmax_entry.get()) # Значение tmax в GUI отображается положительным, а когда оно идёт в TAU_Q, то становится отрицательным, чтобы удовлетворить условия назначения переменной TAU_Q в FDS
-            AREA_MULTIPLIER = self.area_multiplier_entry.get()
-            if not MLRPUA or not TAU_Q or not AREA_MULTIPLIER:
+            #AREA_MULTIPLIER = self.area_multiplier_entry.get()
+            if not MLRPUA or not TAU_Q: #or not AREA_MULTIPLIER:
                 raise ValueError("Поля не должны быть пустыми")
-            self.process_fds_file(fds_path, MLRPUA, TAU_Q, AREA_MULTIPLIER)
+            self.process_fds_file(fds_path, MLRPUA, TAU_Q)
             messagebox.showinfo("Готово!", f"Модифицированный .fds файл сохранён:\n\n{fds_path.replace('.fds', '.fds')}")
             app.quit() # Закрыть окно GUI после сохранения
         except Exception as e:
