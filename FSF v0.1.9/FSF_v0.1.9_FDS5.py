@@ -194,7 +194,7 @@ class FDSProcessorApp(tk.Tk):
             config.read_file(f)
         return config['filePath']['filePath']
 
-    def process_fds_file(self, fds_path, MLRPUA, TAU_Q, AREA_MULTIPLIER):
+    def process_fds_file(self, fds_path, MLRPUA, TAU_Q):
         modified_lines = []
         inside_surf_block = False
         vent_seen = False
