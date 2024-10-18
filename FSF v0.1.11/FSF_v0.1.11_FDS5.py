@@ -40,7 +40,7 @@ class FDSProcessorApp(tk.Tk):
         parent_directory = os.path.abspath(os.path.join(current_directory, os.pardir))
         icon_path = os.path.join(parent_directory, '.gitpics', 'fsf.ico')
         
-        self.title("FDS SURF FIX v0.1.10")
+        self.title("FDS SURF FIX v0.1.11")
         self.iconbitmap(icon_path)
         self.wm_iconbitmap(icon_path)
         
@@ -273,11 +273,14 @@ class FDSProcessorApp(tk.Tk):
         try:
             fds_path = self.read_ini_file(ini_path)
             MLRPUA = float(self.psy_entry.get())
+            TAU_Q = -float(self.tmax_entry.get())
+            """ На случай, если понадобится искусственно увеличивать tmax
             TAU_Q = float(self.tmax_entry.get())   # Значение tmax в GUI отображается положительным, а когда оно идёт в TAU_Q, то становится отрицательным, чтобы удовлетворить условия назначения переменной TAU_Q в FDS
             if (MLRPUA < 1):
                 TAU_Q = -float(1 * TAU_Q)  # Увеличиваем tmax искусственно, поскольку в FDS5 при работе с малыми объёмами часто случается прерывание вследствие численной нестабильности результатов моделирования
             else:
                 TAU_Q = -float(MLRPUA * TAU_Q)
+            """
             #AREA_MULTIPLIER = self.area_multiplier_entry.get()
             if not MLRPUA or not TAU_Q: #or not AREA_MULTIPLIER:
                 raise ValueError("Поля не должны быть пустыми")
