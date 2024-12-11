@@ -3,7 +3,7 @@ import os
 import re
 import tkinter as tk
 from tkinter import messagebox
-from math import sqrt, pi
+from math import sqrt, pi, log10
 
 class Tooltip:
     """Создаёт всплывающие подсказки."""
@@ -40,7 +40,7 @@ class FDSProcessorApp(tk.Tk):
         parent_directory = os.path.abspath(os.path.join(current_directory, os.pardir))
         icon_path = os.path.join(parent_directory, '.gitpics', 'fsf.ico')
         
-        self.title("FDS SURF FIX v0.2.1a")
+        self.title("FDS SURF FIX v0.3.0a")
         self.iconbitmap(icon_path)
         self.wm_iconbitmap(icon_path)
         
@@ -279,12 +279,14 @@ class FDSProcessorApp(tk.Tk):
         
         try:
             HEAT_OF_COMBUSTION = int(self.read_ini_file_HOC(ini_path_hoc))
+            Hc = HEAT_OF_COMBUSTION / 1000
             v = float(self.v_entry.get())
+            A = float(self.stt_entry.get())
             
             fds_path = self.read_ini_file(ini_path)
             
             MLRPUA = float(self.psy_entry.get())
-            HRRPUA = HEAT_OF_COMBUSTION * v * MLRPUA * 0.93
+            HRRPUA = log10(Hc * MLRPUA * A) * 1000
             
             TAU_Q = -float(self.tmax_entry.get())
             
