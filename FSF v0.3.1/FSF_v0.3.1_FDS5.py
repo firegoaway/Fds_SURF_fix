@@ -3,7 +3,7 @@ import os
 import re
 import tkinter as tk
 from tkinter import messagebox
-from math import sqrt, pi
+from math import sqrt, pi, log10
 
 class Tooltip:
     """Создаёт всплывающие подсказки."""
@@ -40,7 +40,7 @@ class FDSProcessorApp(tk.Tk):
         parent_directory = os.path.abspath(os.path.join(current_directory, os.pardir))
         icon_path = os.path.join(parent_directory, '.gitpics', 'fsf.ico')
         
-        self.title("FDS SURF FIX v0.3.0a")
+        self.title("FDS SURF FIX v0.3.1")
         self.iconbitmap(icon_path)
         self.wm_iconbitmap(icon_path)
         
@@ -90,7 +90,7 @@ class FDSProcessorApp(tk.Tk):
         #tk.Label(self, text="AREA_MULTIPLIER:").grid(row=8, column=0, padx=10, pady=5)
         #self.area_multiplier_entry = tk.Entry(self, state='readonly')
         #self.area_multiplier_entry.grid(row=8, column=1, padx=10, pady=5)
-        #Tooltip(self.area_multiplier_entry, "Мультипликатор площади поверхности очага пожара. Переводит фактическую площадь поверхности очага пожара на твёрдом теле в требуемую согласно Приложению 1 Методики 1140")
+        #Tooltip(self.area_multiplier_entry, "Мультипликатор площади поверхности очага пожара. Переводит фактическую площадь поверхности очага #пожара на твёрдом теле в требуемую согласно Приложению 1 Методики 1140")
 
         self.calculate_button = tk.Button(self, text="Рассчитать", command=self.calculate)
         self.calculate_button.grid(row=9, columnspan=2, pady=10)
@@ -187,14 +187,20 @@ class FDSProcessorApp(tk.Tk):
 
         with open(ini_file, 'w') as configfile:
             config.write(configfile)
-
+    
     def read_ini_file(self, ini_file):
         config = configparser.ConfigParser()
         with open(ini_file, 'r', encoding='utf-16') as f:
             config.read_file(f)
         return config['filePath']['filePath']
-
-    def process_fds_file(self, fds_path, MLRPUA, TAU_Q):
+    
+    def read_ini_file_HOC(self, ini_file):
+        config = configparser.ConfigParser()
+        with open(ini_file, 'r', encoding='utf-16') as f:
+            config.read_file(f)
+        return config['HEAT_OF_COMBUSTION']['HEAT_OF_COMBUSTION']
+    
+    def process_fds_file(self, fds_path, HRRPUA, TAU_Q):
         modified_lines = []
         inside_surf_block = False
         vent_seen = False
@@ -212,13 +218,13 @@ class FDSProcessorApp(tk.Tk):
 
                     inside_surf_block = True
                     vent_seen = False
-                    v = self.v_entry.get()
+                    v = float(self.v_entry.get())
                     
                     if 'HRRPUA' in line:
                         hrrpua_found = True
                         inside_surf_block = True
                         modified_lines.append(f"&SURF ID='{surf_id}', ")
-                        modified_lines.append(f"MLRPUA={MLRPUA}, ")
+                        modified_lines.append(f"HRRPUA={HRRPUA}, ")
                         modified_lines.append(f"COLOR='RED', ")
                         modified_lines.append(f"TAU_Q={TAU_Q}/\n")
                     else:
@@ -229,8 +235,8 @@ class FDSProcessorApp(tk.Tk):
                 if inside_surf_block and hrrpua_found:
                     if line.startswith('&VENT'):
                         line = re.sub(r"CTRL_ID='[^']*'\s*", '', line)
-                        if 'SPREAD_RATE' not in line:
-                            line = line.rstrip('\n') + f" SPREAD_RATE={v}\n"
+                        if 'SPREAD_RATE' in line:
+                            line = re.sub(r"SPREAD_RATE=[^\s]*\s*", '', line)    #   line = line.rstrip('\n') + f" SPREAD_RATE={v}\n"
                         modified_lines.append(line)
                         vent_seen = True
                         continue
@@ -254,6 +260,9 @@ class FDSProcessorApp(tk.Tk):
                     continue
                 else:
                     remove_ctrl_ramp = False
+                    
+                if line.startswith('&ZONE'):
+                    continue
 
                 modified_lines.append(line)
 
@@ -266,17 +275,36 @@ class FDSProcessorApp(tk.Tk):
         inis_path = os.path.join(parent_directory, 'inis')
         
         ini_path = os.path.join(inis_path, 'filePath.ini')
+        ini_path_hoc = os.path.join(inis_path, 'HOC.ini')
         
         try:
+            HEAT_OF_COMBUSTION = int(self.read_ini_file_HOC(ini_path_hoc))
+            Hc = HEAT_OF_COMBUSTION / 1000
+            v = float(self.v_entry.get())
+            
             fds_path = self.read_ini_file(ini_path)
-            MLRPUA = self.psy_entry.get()
-            TAU_Q = -float(self.tmax_entry.get()) # Значение tmax в GUI отображается положительным, а когда оно идёт в TAU_Q, то становится отрицательным, чтобы удовлетворить условия назначения переменной TAU_Q в FDS
+            
+            MLRPUA = float(self.psy_entry.get())
+            HRRPUA = Hc * MLRPUA * 0.93 * 1000 * 0.63 # 1000 = 1 тонна ГН ; 0.63 - это поправка на газодинамику
+            
+            TAU_Q = -float(self.tmax_entry.get())
+            
+            """ На случай, если понадобится искусственно увеличивать tmax
+            TAU_Q = float(self.tmax_entry.get())   # Значение tmax в GUI отображается положительным, а когда оно идёт в TAU_Q, то становится отрицательным, чтобы удовлетворить условия назначения переменной TAU_Q в FDS
+            if (MLRPUA < 1):
+                TAU_Q = -float(1 * TAU_Q)  # Увеличиваем tmax искусственно, поскольку в FDS5 при работе с малыми объёмами часто случается прерывание вследствие численной нестабильности результатов моделирования
+            else:
+                TAU_Q = -float(MLRPUA * TAU_Q)
+            """
+            
             #AREA_MULTIPLIER = self.area_multiplier_entry.get()
             if not MLRPUA or not TAU_Q: #or not AREA_MULTIPLIER:
                 raise ValueError("Поля не должны быть пустыми")
-            self.process_fds_file(fds_path, MLRPUA, TAU_Q)
+            
+            self.process_fds_file(fds_path, HRRPUA, TAU_Q)
             messagebox.showinfo("Готово!", f"Модифицированный .fds файл сохранён:\n\n{fds_path.replace('.fds', '.fds')}")
             app.quit() # Закрыть окно GUI после сохранения
+            
         except Exception as e:
             messagebox.showerror("Ошибка", str(e))
 
