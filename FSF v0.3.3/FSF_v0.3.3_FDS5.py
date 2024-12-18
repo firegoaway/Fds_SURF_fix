@@ -40,7 +40,7 @@ class FDSProcessorApp(tk.Tk):
         parent_directory = os.path.abspath(os.path.join(current_directory, os.pardir))
         icon_path = os.path.join(parent_directory, '.gitpics', 'fsf.ico')
         
-        self.title("FDS SURF FIX v0.3.2")
+        self.title("FDS SURF FIX v0.3.3")
         self.iconbitmap(icon_path)
         self.wm_iconbitmap(icon_path)
         
@@ -126,7 +126,7 @@ class FDSProcessorApp(tk.Tk):
                 self.fpom_entry.insert(0, config['Calculations']['Fpom'])
                 self.v_entry.insert(0, config['Calculations']['v'])
                 self.psyd_entry.insert(0, config['Calculations']['psi_ud'])
-                self.m_entry.insert(0, 0.0000)  # self.m_entry.insert(0, config['Calculations']['m'])
+                self.m_entry.insert(0, 0.0)  # self.m_entry.insert(0, config['Calculations']['m'])
                 # Считываем нередактируемые данные
                 self.tmax_entry.insert(0, config['Calculations']['tmax'])
                 self.psy_entry.insert(0, config['Calculations']['Psi'])
@@ -300,13 +300,16 @@ class FDSProcessorApp(tk.Tk):
             v = float(self.v_entry.get())
             m = float(self.m_entry.get())
             Fpom = float(self.fpom_entry.get())
+            TAU_Q = -float(self.tmax_entry.get())
             
             fds_path = self.read_ini_file(ini_path)
             
-            MLRPUA = float(self.psy_entry.get())
-            TAU_Q = -float(self.tmax_entry.get())
+            if m > 0:
+                MLRPUA = m / -TAU_Q
             
-            MLRPUA = m / -TAU_Q
+            else:
+                MLRPUA = float(self.psy_entry.get())
+                
             HRRPUA = Hc * MLRPUA * 0.93 * 1000
             
             """ На случай, если понадобится искусственно увеличивать tmax
@@ -317,7 +320,10 @@ class FDSProcessorApp(tk.Tk):
                 TAU_Q = -float(MLRPUA * TAU_Q)
             """
             
-            if not MLRPUA or not TAU_Q or not M:
+            if not MLRPUA or not TAU_Q:
+                print(f'm = {m}')
+                print(f'MLRPUA = {MLRPUA}')
+                print(f'TAU_Q = {TAU_Q}')
                 raise ValueError("Поля не должны быть пустыми")
             
             self.process_fds_file(fds_path, HRRPUA, TAU_Q)
