@@ -1,0 +1,426 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<?application progid="SMath Solver" version="1.3.0.9126"?>
+<worksheet xmlns="http://smath.info/schemas/worksheet/1.0">
+  <settings ppi="96">
+    <identity>
+      <id>f3a4013b-0ae8-4742-89d9-666e27444dd6</id>
+      <revision>56</revision>
+    </identity>
+    <metadata lang="rus">
+      <author>Umakhan</author>
+    </metadata>
+    <calculation>
+      <precision>4</precision>
+      <exponentialThreshold>5</exponentialThreshold>
+      <trailingZeros>false</trailingZeros>
+      <significantDigitsMode>false</significantDigitsMode>
+      <mixedNumbers>false</mixedNumbers>
+      <roundingMode>0</roundingMode>
+      <approximateEqualAccuracy>0</approximateEqualAccuracy>
+      <fractions>decimal</fractions>
+    </calculation>
+    <pageModel active="false" viewMode="2" printGrid="false" printAreas="true" simpleEqualsOnly="false" printBackgroundImages="true" hideElementsHighlightings="true">
+      <paper id="9" orientation="Portrait" width="827" height="1169" />
+      <margins left="39" right="39" top="49" bottom="49" />
+      <header alignment="Center" color="#a9a9a9">&amp;[DATE] &amp;[TIME] - &amp;[FILENAME]</header>
+      <footer alignment="Center" color="#a9a9a9">&amp;[PAGENUM] / &amp;[COUNT]</footer>
+      <backgrounds />
+    </pageModel>
+    <dependencies>
+      <assembly name="SMath Core" version="1.73.9126.0" guid="a37cba83-b69c-4c71-9992-55ff666763bd" />
+      <assembly name="MathRegion" version="1.73.9126.0" guid="02f1ab51-215b-466e-a74d-5d8b1cf85e8d" />
+    </dependencies>
+  </settings>
+  <regions type="content">
+    <region left="0" top="0" width="194" height="52" color="#000000" fontSize="12">
+      <math>
+        <description active="false" position="Right" lang="eng">
+          <content>
+            <p>Уравнение изменения температуры колбы спринклера</p>
+          </content>
+        </description>
+        <input>
+          <e type="operand">Tu</e>
+          <e type="operand">t</e>
+          <e type="function" args="2">diff</e>
+          <e type="operand">u</e>
+          <e type="function" args="1">abs</e>
+          <e type="function" args="1">sqrt</e>
+          <e type="operand">K</e>
+          <e type="operator" args="2">/</e>
+          <e type="operand">T</e>
+          <e type="operand">Tu</e>
+          <e type="operator" args="2">-</e>
+          <e type="bracket">(</e>
+          <e type="operator" args="2">*</e>
+          <e type="operator" args="2">≡</e>
+        </input>
+      </math>
+    </region>
+    <region left="0" top="72" width="259" height="86" color="#000000" fontSize="12">
+      <math optimize="2">
+        <description active="false" position="Right" lang="eng">
+          <content>
+            <p>Уравнение изменения температуры в очаговой зоне,°C</p>
+          </content>
+        </description>
+        <input>
+          <e type="operand">T</e>
+          <e type="operand">t</e>
+          <e type="function" args="2">diff</e>
+          <e type="operand">1</e>
+          <e type="operand">Δ</e>
+          <e type="operator" args="2">/</e>
+          <e type="operand">q</e>
+          <e type="operand">ε</e>
+          <e type="operand">σ</e>
+          <e type="operator" args="2">*</e>
+          <e type="operator" args="2">/</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand">e</e>
+          <e type="operand">α</e>
+          <e type="operand">hu</e>
+          <e type="operator" args="2">*</e>
+          <e type="bracket">(</e>
+          <e type="operator" args="1">-</e>
+          <e type="operator" args="2">^</e>
+          <e type="operator" args="2">*</e>
+          <e type="bracket">(</e>
+          <e type="operand">1</e>
+          <e type="operand">4</e>
+          <e type="operator" args="2">/</e>
+          <e type="operator" args="2">^</e>
+          <e type="operator" args="2">≡</e>
+        </input>
+      </math>
+    </region>
+    <region left="0" top="198" width="101" height="27" color="#000000" fontSize="12">
+      <math>
+        <description active="true" position="Right" lang="eng">
+          <content>
+            <p>Площадь помещения с очагом пожара, м^2</p>
+          </content>
+        </description>
+        <input>
+          <e type="operand">Fpom</e>
+          <e type="operand">500</e>
+          <e type="operator" args="2">:</e>
+        </input>
+      </math>
+    </region>
+    <region left="0" top="225" width="53" height="27" color="#000000" fontSize="12">
+      <math>
+        <description active="false" position="Right" lang="eng">
+          <content>
+            <p></p>
+          </content>
+        </description>
+        <input>
+          <e type="operand">k</e>
+          <e type="operand">2</e>
+          <e type="operator" args="2">:</e>
+        </input>
+      </math>
+    </region>
+    <region left="0" top="252" width="82" height="27" color="#000000" fontSize="12">
+      <math>
+        <description active="true" position="Right" lang="eng">
+          <content>
+            <p>Время моделирования пожара, с</p>
+          </content>
+        </description>
+        <input>
+          <e type="operand">t</e>
+          <e type="operand">3000</e>
+          <e type="operator" args="2">:</e>
+        </input>
+      </math>
+    </region>
+    <region left="0" top="297" width="120" height="27" color="#000000" fontSize="12">
+      <math>
+        <description active="true" position="Right" lang="eng">
+          <content>
+            <p>Низшая теплота сгорания, МДж/кг</p>
+          </content>
+        </description>
+        <input>
+          <e type="operand">HRR</e>
+          <e type="operand">13.800</e>
+          <e type="operator" args="2">:</e>
+        </input>
+      </math>
+    </region>
+    <region left="0" top="324" width="139" height="27" color="#000000" fontSize="12">
+      <math>
+        <description active="true" position="Right" lang="eng">
+          <content>
+            <p>Удельная массовая скорость выгорания, кг/((м^2)*с)</p>
+          </content>
+        </description>
+        <input>
+          <e type="operand">psi_yd</e>
+          <e type="operand">0.015</e>
+          <e type="operator" args="2">:</e>
+        </input>
+      </math>
+    </region>
+    <region left="0" top="351" width="101" height="27" color="#000000" fontSize="12">
+      <math>
+        <description active="true" position="Right" lang="eng">
+          <content>
+            <p>Линейная скорость распространения пламени, м/с</p>
+          </content>
+        </description>
+        <input>
+          <e type="operand">v</e>
+          <e type="operand">0.0055</e>
+          <e type="operator" args="2">:</e>
+        </input>
+      </math>
+    </region>
+    <region left="0" top="396" width="281" height="39" color="#000000" fontSize="12">
+      <math optimize="2" exponentialThreshold="10">
+        <description active="false" position="Right" lang="eng">
+          <content>
+            <p>Теплота сгорания (тепловая мощность пожара), кВт</p>
+          </content>
+        </description>
+        <input>
+          <e type="operand">q</e>
+          <e type="operand">HRR</e>
+          <e type="operand">psi_yd</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand">π</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand">v</e>
+          <e type="operand">2</e>
+          <e type="operator" args="2">^</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand">t</e>
+          <e type="operand">2</e>
+          <e type="operator" args="2">^</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand">1000</e>
+          <e type="operator" args="2">*</e>
+          <e type="operator" args="2">:</e>
+        </input>
+      </math>
+    </region>
+    <region left="0" top="468" width="62" height="27" color="#000000" fontSize="12">
+      <math>
+        <description active="true" position="Right" lang="eng">
+          <content>
+            <p>Высота, на которой располагается спринклер, м</p>
+          </content>
+        </description>
+        <input>
+          <e type="operand">hu</e>
+          <e type="operand">3</e>
+          <e type="operator" args="2">:</e>
+        </input>
+      </math>
+    </region>
+    <region left="0" top="495" width="110" height="39" color="#000000" fontSize="12">
+      <math>
+        <description active="true" position="Right" lang="eng">
+          <content>
+            <p>Коэффициент пропускания атмосферы</p>
+          </content>
+        </description>
+        <input>
+          <e type="operand">α</e>
+          <e type="operand">2</e>
+          <e type="operand">10</e>
+          <e type="operand">4</e>
+          <e type="operator" args="1">-</e>
+          <e type="operator" args="2">^</e>
+          <e type="operator" args="2">*</e>
+          <e type="operator" args="2">:</e>
+        </input>
+      </math>
+    </region>
+    <region left="0" top="531" width="82" height="27" color="#000000" fontSize="12">
+      <math>
+        <description active="true" position="Right" lang="eng">
+          <content>
+            <p>Эмиссивность колбы спринклера</p>
+          </content>
+        </description>
+        <input>
+          <e type="operand">ε</e>
+          <e type="operand">0.85</e>
+          <e type="operator" args="2">:</e>
+        </input>
+      </math>
+    </region>
+    <region left="0" top="558" width="206" height="39" color="#000000" fontSize="12">
+      <math>
+        <description active="true" position="Right" lang="eng">
+          <content>
+            <p>Постоянная Стеффана-Больцмана</p>
+          </content>
+        </description>
+        <input>
+          <e type="operand">σ</e>
+          <e type="operand">5.670374419</e>
+          <e type="operand">10</e>
+          <e type="operand">8</e>
+          <e type="operator" args="1">-</e>
+          <e type="operator" args="2">^</e>
+          <e type="operator" args="2">*</e>
+          <e type="operator" args="2">:</e>
+        </input>
+      </math>
+    </region>
+    <region left="0" top="621" width="231" height="41" color="#000000" fontSize="12">
+      <math>
+        <description active="true" position="Right" lang="eng">
+          <content>
+            <p>угловой коэффициент по нормали к очагу</p>
+          </content>
+        </description>
+        <input>
+          <e type="operand">φ</e>
+          <e type="operand">1</e>
+          <e type="operand">v</e>
+          <e type="operand">2</e>
+          <e type="operator" args="2">^</e>
+          <e type="operand">t</e>
+          <e type="operand">2</e>
+          <e type="operator" args="2">^</e>
+          <e type="operator" args="2">*</e>
+          <e type="operator" args="2">+</e>
+          <e type="function" args="1">sqrt</e>
+          <e type="operator" args="2">:</e>
+        </input>
+        <result action="numeric">
+          <e type="operand">16.5303</e>
+        </result>
+      </math>
+    </region>
+    <region left="0" top="702" width="226" height="49" color="#000000" fontSize="12">
+      <math>
+        <description active="true" position="Right" lang="eng">
+          <content>
+            <p>угловой коэффициент по окружности вдоль очаговой зоны</p>
+          </content>
+        </description>
+        <input>
+          <e type="operand">β</e>
+          <e type="operand">1</e>
+          <e type="operand">60</e>
+          <e type="operand">π</e>
+          <e type="operand">180</e>
+          <e type="operator" args="2">/</e>
+          <e type="operator" args="2">*</e>
+          <e type="operator" args="2">+</e>
+          <e type="function" args="1">sqrt</e>
+          <e type="operator" args="2">:</e>
+        </input>
+        <result action="numeric">
+          <e type="operand">1.4308</e>
+        </result>
+      </math>
+    </region>
+    <region left="0" top="774" width="282" height="29" color="#000000" fontSize="12">
+      <math>
+        <description active="true" position="Right" lang="eng">
+          <content>
+            <p>градиент теплового переноса</p>
+          </content>
+        </description>
+        <input>
+          <e type="operand">Δ</e>
+          <e type="operand">φ</e>
+          <e type="function" args="1">atan</e>
+          <e type="operand">β</e>
+          <e type="function" args="1">atan</e>
+          <e type="operator" args="2">*</e>
+          <e type="operator" args="2">:</e>
+        </input>
+        <result action="numeric">
+          <e type="operand">1.4512</e>
+        </result>
+      </math>
+    </region>
+    <region left="0" top="828" width="334" height="86" color="#000000" fontSize="12">
+      <math>
+        <description active="false" position="Right" lang="eng">
+          <content>
+            <p>Зависимость температуры пламени от тепловой мощности пожара, °C</p>
+          </content>
+        </description>
+        <input>
+          <e type="operand">T</e>
+          <e type="operand">1</e>
+          <e type="operand">Δ</e>
+          <e type="operator" args="2">/</e>
+          <e type="operand">q</e>
+          <e type="operand">ε</e>
+          <e type="operand">σ</e>
+          <e type="operator" args="2">*</e>
+          <e type="operator" args="2">/</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand">e</e>
+          <e type="operand">α</e>
+          <e type="operand">hu</e>
+          <e type="operator" args="2">*</e>
+          <e type="bracket">(</e>
+          <e type="operator" args="1">-</e>
+          <e type="operator" args="2">^</e>
+          <e type="operator" args="2">*</e>
+          <e type="bracket">(</e>
+          <e type="operand">1</e>
+          <e type="operand">4</e>
+          <e type="operator" args="2">/</e>
+          <e type="operator" args="2">^</e>
+          <e type="operator" args="2">:</e>
+        </input>
+        <result action="numeric">
+          <e type="operand">1261.1577</e>
+        </result>
+      </math>
+    </region>
+    <region left="0" top="936" width="91" height="27" color="#000000" fontSize="12">
+      <math>
+        <input>
+          <e type="operand">Tu_0</e>
+          <e type="operand">20</e>
+          <e type="operator" args="2">:</e>
+        </input>
+      </math>
+    </region>
+    <region left="0" top="954" width="82" height="27" color="#000000" fontSize="12">
+      <math>
+        <input>
+          <e type="operand">g</e>
+          <e type="operand">9.81</e>
+          <e type="operator" args="2">:</e>
+        </input>
+      </math>
+    </region>
+    <region left="0" top="990" width="339" height="49" color="#000000" fontSize="12">
+      <math>
+        <input>
+          <e type="operand">u</e>
+          <e type="operand">2</e>
+          <e type="operand">g</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand">hu</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand">T</e>
+          <e type="operand">Tu_0</e>
+          <e type="operand">273.15</e>
+          <e type="operator" args="2">+</e>
+          <e type="operator" args="2">/</e>
+          <e type="operator" args="2">*</e>
+          <e type="function" args="1">sqrt</e>
+          <e type="operator" args="2">:</e>
+        </input>
+        <result action="numeric">
+          <e type="operand">15.9129</e>
+        </result>
+      </math>
+    </region>
+  </regions>
+</worksheet>
