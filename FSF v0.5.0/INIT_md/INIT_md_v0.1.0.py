@@ -284,6 +284,7 @@ def modify_fds_file(page):
         cached_data = data
         cached_time_data = time_data
 
+        # Koridor
         density_vm_koridor_values = [
             values for key, values in data.items() if "Density_VM Koridor" in key
         ]
@@ -301,6 +302,25 @@ def modify_fds_file(page):
 
         print(f"Minimum Density_VM Koridor value: {min_density_vm_koridor}")
         print(f"Average Maximum MFLOW+ Koridor value: {avg_max_mflow_koridor}")
+        
+        # Non-Koridor
+        density_vm_non_koridor_values = [
+            values for key, values in data.items() if "Density_VM" in key and "Koridor" not in key
+        ]
+        min_density_vm_non_koridor = None
+        if density_vm_non_koridor_values:
+            min_density_vm_non_koridor = min(min(values) for values in density_vm_non_koridor_values)
+
+        mflow_non_koridor_values = [
+            values for key, values in data.items() if "MFLOW+" in key and "Koridor" not in key
+        ]
+        avg_max_mflow_non_koridor = None
+        if mflow_non_koridor_values:
+            max_values = [max(values) for values in mflow_non_koridor_values]
+            avg_max_mflow_non_koridor = sum(max_values) / len(max_values)
+
+        print(f"Minimum Density_VM non-Koridor value: {min_density_vm_non_koridor}")
+        print(f"Average Maximum MFLOW+ non-Koridor value: {avg_max_mflow_non_koridor}")
 
         standard_plots = {}
         koridor_plots = {}
