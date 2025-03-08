@@ -249,7 +249,7 @@ class FDSProcessorApp:
         ini_path_hoc = os.path.join(inis_path, f'HOC_{ProcessID}.ini')
         
         try:
-            # Парсим входные переменны
+            # Парсим входные переменные
             k = float(self.k_entry.value)
             Fpom = float(self.fpom_entry.value)
             v = float(self.v_entry.value)
@@ -260,19 +260,21 @@ class FDSProcessorApp:
             tmax = sqrt((k * Fpom) / (pi * v**2))
             Psi = psi_ud * pi * v**2 * tmax**2
             Stt = pi * (v * tmax)**2
+            
+            HEAT_OF_COMBUSTION = int(self.read_ini_file_HOC(ini_path_hoc))
+            Hc = HEAT_OF_COMBUSTION / 1000
 
             if m > 0:
                 bigM = Psi * tmax
                 Psi = m / tmax
                 bigM = m
+                HRRPUA = Hc * Psi * 0.93 * 1000
             else:
                 bigM = Psi * tmax
-                Psi = bigM / tmax
-
-            HEAT_OF_COMBUSTION = int(self.read_ini_file_HOC(ini_path_hoc))
-            Hc = HEAT_OF_COMBUSTION / 1000
-            HRRPUA = Hc * Psi * 0.93 * 1000
+                Psi = 0.3 * (1 / k) * (bigM / tmax)
+                HRRPUA = Hc * Psi * 0.93 * 1000
             
+            """
             D = (HRRPUA / (1.204 * 1.005 * 38 * sqrt(9.81))) ** (2/5)
             dx16 = D / 16
             dx10 = D / 10
@@ -294,6 +296,7 @@ class FDSProcessorApp:
             )
             self.page.overlay.append(snack_bar)
             snack_bar.open = True
+            """
 
             # Обновляем нередактируемые поля вычисленными значениями
             self.tmax_entry.value = f"{tmax:.4f}"
@@ -333,7 +336,7 @@ class FDSProcessorApp:
             snack_bar.open = True
             self.page.update()
 
-    def save_to_ini(self, k, Fpom, v, psi_ud, m, tmax, Psi, Stt, bigM):
+    def save_to_ini(self, k, Fpom, v, psi_ud, m, tmax, Psi, Stt, bigM, HRRPUA):
         config = configparser.ConfigParser()
         config['Calculations'] = {
             'k': k,
@@ -357,6 +360,21 @@ class FDSProcessorApp:
             config.write(configfile)
 
     def process_files(self, e):
+        # Собираем введенные и рассчитанные переменные
+        k = self.k_entry.value
+        Fpom = self.fpom_entry.value
+        v = self.v_entry.value
+        psi_ud = self.psyd_entry.value
+        m = self.m_entry.value
+        tmax = self.tmax_entry.value
+        Psi = self.psy_entry.value
+        Stt = self.stt_entry.value
+        bigM = self.bigM_entry.value
+        HRRPUA = self.hrr_entry.value
+
+        # Сохраняем в INI
+        self.save_to_ini(k, Fpom, v, psi_ud, m, tmax, Psi, Stt, bigM, HRRPUA)
+        
         current_directory = os.path.dirname(__file__)
         parent_directory = os.path.abspath(os.path.join(current_directory, os.pardir))
         inis_path = os.path.join(parent_directory, 'inis')
