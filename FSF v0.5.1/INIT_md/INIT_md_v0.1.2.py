@@ -199,7 +199,7 @@ class MainWindow(QMainWindow):
         print(f"fds_dir: {fds_dir}")
         csv_files = glob.glob(os.path.join(fds_dir, f"{self.chid}*_devc.csv"))
         devc_data = {}
-        pattern_dev_id = re.compile(r'^(h(_Koridor)?_\d+|Density_VM(_Koridor)?_\d+|Tg 3D(_Koridor)?_\d+|MFLOW\+(_Koridor)?_\d+)$', re.IGNORECASE)
+        pattern_dev_id = re.compile(r'^(h?_\d+|Density_VM?_\d+|Tg 3D?_\d+|MFLOW\+?_\d+)$', re.IGNORECASE)
         
         for csv_file in csv_files:
             try:
@@ -207,22 +207,23 @@ class MainWindow(QMainWindow):
                     reader = csv.reader(f)
                     lines_read = 0
                     headers = []
-                    time_column = None  # Will be determined per CSV file
+                    time_column = None
                     relevant_indices = {}
                     for row in reader:
                         lines_read += 1
                         if lines_read == 2:
                             headers = [h.strip().strip('"') for h in row]
-                            # Check for valid time column names
                             possible_time_columns = ["FDS Time", "Time"]
+                            time_column = None
+                            time_idx = -1
                             for col in possible_time_columns:
                                 if col in headers:
                                     time_column = col
+                                    time_idx = headers.index(col)
                                     break
-                            if not time_column:
+                            if time_column is None:
                                 print(f"Error: Time column not found in {csv_file}. Skipping.")
-                                break  # Skip processing this file
-                            # Build relevant_indices for this file
+                                break
                             relevant_indices = {}
                             for idx, col_name in enumerate(headers):
                                 if col_name == time_column:
@@ -231,7 +232,7 @@ class MainWindow(QMainWindow):
                                     relevant_indices[idx] = col_name
                                     if col_name not in devc_data:
                                         devc_data[col_name] = {"time": [], "values": []}
-                        elif lines_read > 2 and time_column:  # Only process data if time_column was found
+                        elif lines_read > 2 and time_column:
                             t_val = None
                             for idx in relevant_indices:
                                 col_name = relevant_indices[idx]
@@ -254,7 +255,6 @@ class MainWindow(QMainWindow):
                 print(f"Error processing {csv_file}: {str(e)}")
                 continue
         
-        # The rest of the code remains the same as before...
         density_vm_mins = []
         mflow_plus_values_for_avg = []
         non_koridor_plots = []
