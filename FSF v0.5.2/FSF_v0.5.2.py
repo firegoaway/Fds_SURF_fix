@@ -10,7 +10,7 @@ import sys
 class FDSProcessorApp:
     def __init__(self, page: ft.Page):
         self.page = page
-        self.page.title = f"FSF v0.5.1 ID:{ProcessID}"
+        self.page.title = f"FSF v0.5.2 ID:{ProcessID}"
         self.page.window.width = 400
         self.page.window.height = 780
         self.page.scroll = "auto"
