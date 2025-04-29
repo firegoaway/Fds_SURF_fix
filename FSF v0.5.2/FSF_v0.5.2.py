@@ -271,7 +271,7 @@ class FDSProcessorApp:
                 HRRPUA = Hc * Psi * 0.93 * 1000
             else:
                 bigM = Psi * tmax
-                Psi = 0.3 * (1 / k) * (bigM / tmax)
+                Psi = 0.45 * (1 / k) * (bigM / tmax)
                 HRRPUA = Hc * Psi * 0.93 * 1000
             
             """
