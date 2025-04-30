@@ -10,7 +10,7 @@ import sys
 class FDSProcessorApp:
     def __init__(self, page: ft.Page):
         self.page = page
-        self.page.title = f"FSF v0.5.2 ID:{ProcessID}"
+        self.page.title = f"FSF v0.5.3 ID:{ProcessID}"
         self.page.window.width = 400
         self.page.window.height = 780
         self.page.scroll = "auto"
@@ -261,7 +261,7 @@ class FDSProcessorApp:
             Psi = psi_ud * pi * v**2 * tmax**2
             Stt = pi * (v * tmax)**2
             
-            HEAT_OF_COMBUSTION = int(self.read_ini_file_HOC(ini_path_hoc))
+            HEAT_OF_COMBUSTION = float(self.read_ini_file_HOC(ini_path_hoc))
             Hc = HEAT_OF_COMBUSTION / 1000
 
             if m > 0:
@@ -383,7 +383,7 @@ class FDSProcessorApp:
         ini_path_hoc = os.path.join(inis_path, f'HOC_{ProcessID}.ini')
 
         try:
-            HEAT_OF_COMBUSTION = int(self.read_ini_file_HOC(ini_path_hoc))
+            HEAT_OF_COMBUSTION = float(self.read_ini_file_HOC(ini_path_hoc))
             Hc = HEAT_OF_COMBUSTION / 1000
             v = float(self.v_entry.value)
             m = float(self.m_entry.value)
@@ -406,7 +406,6 @@ class FDSProcessorApp:
             snack_bar = ft.SnackBar(content=ft.Text(f"Модифицированный .fds файл сохранён:\n\n{fds_path.replace('.fds', '.fds')}"))
             self.page.overlay.append(snack_bar)
             snack_bar.open = True
-            self.page.update()
             
             # Планируем закрытие с помощью close_window coroutine
             async def close_window():
