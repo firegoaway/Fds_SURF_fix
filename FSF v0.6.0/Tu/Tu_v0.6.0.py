@@ -1,577 +1,491 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import odeint
-import flet as ft
 import io
 import base64
-import random
+import sys
+import math
 
-# Используем не-GUI бэкенд для Matplotlib
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout,
+                             QLineEdit, QPushButton, QComboBox, QMessageBox, QFileDialog, QStatusBar,
+                             QFormLayout, QScrollArea)
+from PyQt6.QtGui import QPalette, QColor, QFont, QPixmap, QDoubleValidator, QIntValidator
+from PyQt6.QtCore import Qt, QLocale, QSize
+
+# Ensure Matplotlib uses a non-GUI backend
 plt.switch_backend('Agg')
 
-temperatures_gas = []
-critical_time_gas = None
-Tu_solution = []
-x_mark_dTu = None
-y_mark_dTu = None
+class SprinklerCalcApp(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Расчёт времени активации спринклера v0.6.0")
+        self.setMinimumSize(1400, 800) # Match original Flet window size
 
-# Функция, определяющая дифференциальное уравнение
-def sprinkler_sensor_temp(Tu, t, T_func):
-    T = T_func(t)   # T_func предоставляет значение T для данного t
-    if T < Tu_0:
-        return 0  # Tu растёт только если T >= Tu_0
-    return np.sqrt(u_dynamic(T)) / K * (T - Tu)
+        self._setup_palette()
+        self._setup_ui()
 
-# Модифицированная функция интерполяции для T, в зависимости от времени t
-def gas_temperature(t):
-    T = ((1 / Delta(t)) * (q(t) / (epsilon * sigma)) * np.exp(-(alpha * hu))) ** (1/4)
-    return max(T, Tu_0)  # Чтобы T не падал ниже Tu_0
+        # Initialize instance variables that will hold calculation results
+        self.temperatures_gas = []
+        self.critical_time_gas = None
+        self.Tu_solution = []
+        self.x_mark_dTu = None
+        self.y_mark_dTu = None
+        self.time = None
+        self.plot_pixmap = None # To store the generated plot for saving
 
-# Динамическая функция для вычисления `u` на основе формулы
-def u_dynamic(T):
-    return np.sqrt(2 * g * hu * (T / (Tu_0+273.15)))
+        # Dynamically assigned callable attributes (initialized to None)
+        self.q_func = None
+        self.phi_func = None
+        self.beta_val = None # This will be a float, not a function
+        self.Delta_func = None
+        # Fixed constants
+        self.sigma = 5.670374419e-8
+        self.g = 9.81
+        self.rho = 1.2   # Плотность воздуха (кг/м³)
+        self.cp = 1.005  # Удельная теплоёмкость воздуха (кДж/(кг·K))
 
-def main(page: ft.Page):
-    page.title = "Расчёт времени активации спринклера v0.6.0"
-    page.vertical_alignment = ft.MainAxisAlignment.CENTER
-    page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
-    page.window.width = 1280
-    page.window.height = 720
-    page.scroll = "auto"
-    
-    # Заголовки
-    main_heading = ft.Row(
-        controls=[
-            ft.Text(
-                text_align=ft.TextAlign.CENTER,
-                value="Расчёт времени задержки, связанного с инерционностью АУПТ",
-                size=24,
-                weight=ft.FontWeight.W_100,
-                selectable=True,
-                height="50"
-            )
-        ],
-        alignment=ft.MainAxisAlignment.CENTER
-    )
-    input_heading = ft.Row(
-        controls=[
-            ft.Text(
-                text_align=ft.TextAlign.LEFT,
-                value="Введите значения\nпеременных",
-                size=16,
-                weight=ft.FontWeight.W_100,
-                selectable=True,
-                height="50"
-            )
-        ],
-        alignment=ft.MainAxisAlignment.START
-    )
-    result_heading = ft.Row(
-        controls=[
-            ft.Text(
-                text_align=ft.TextAlign.CENTER,
-                value="Результаты",
-                size=18,
-                weight=ft.FontWeight.W_100,
-                selectable=True,
-                height="50"
-            )
-        ],
-        alignment=ft.MainAxisAlignment.CENTER
-    )
+        # Connect button signals
+        self.calculate_button.clicked.connect(self.calculate)
+        self.save_plot_button.clicked.connect(self.save_plot)
+        self.save_plot_button.setEnabled(False) # Initially disabled
 
-    # Поля ввода для параметров
-    Fpom_input = ft.TextField(
-        label="Fpom",
-        value="500",
-        label_style=ft.TextStyle(size=24),
-        hint_text="Площадь помещения с очагом пожара, м\u00b2",
-        tooltip="Площадь помещения с очагом пожара, м\u00b2",
-        prefix_icon=ft.icons.EDIT_OUTLINED,
-        prefix_text="* ",
-        border_width=2,
-    )
-    HRR_input = ft.TextField(
-        label="HRR",
-        value="13.800",
-        label_style=ft.TextStyle(size=24),
-        hint_text="Низшая теплота сгорания, МДж/м\u00b2",
-        tooltip="Низшая теплота сгорания горючего материала, МДж/м\u00b2",
-        prefix_icon=ft.icons.EDIT_OUTLINED,
-        prefix_text="* ",
-        border_width=2,
-    )
-    v_input = ft.TextField(
-        label="v",
-        value="0.0055",
-        label_style=ft.TextStyle(size=24),
-        hint_text="Линейная скорость распространения пламени, м/с",
-        tooltip="Линейная скорость распространения пламени, м/с\n\nСправочная величина, которая для может быть найдена в пожарно-технических справочниках или других специальных литературных источниках",
-        prefix_icon=ft.icons.EDIT_OUTLINED,
-        prefix_text="* ",
-        border_width=2,
-    )
-    psi_yd_input = ft.TextField(
-        label="\u03c8уд",
-        value="0.015",
-        label_style=ft.TextStyle(size=24),
-        hint_text="Удельная массовая скорость выгорания, кг/(с*м\u00b2)",
-        tooltip="Удельная массовая скорость выгорания (для жидкостей установившаяся), кг/(с*м\u00b2)",
-        prefix_icon=ft.icons.EDIT_OUTLINED,
-        prefix_text="* ",
-        border_width=2,
-    )
-    Cs_input = ft.TextField(
-        label="Cs",
-        value="0.1",
-        label_style=ft.TextStyle(size=24),
-        hint_text="Размер ячейки, м",
-        tooltip="Размер ячейки, м",
-        prefix_icon=ft.icons.EDIT_OUTLINED,
-        prefix_text="* ",
-        border_width=2,
-    )
-    Hpom_input = ft.TextField(
-        label="Hпом",
-        value="3",
-        label_style=ft.TextStyle(size=24),
-        hint_text="Высота помещения, м",
-        tooltip="Высота помещения с очагом пожара (высота до потолка), м",
-        prefix_icon=ft.icons.EDIT_OUTLINED,
-        prefix_text="* ",
-        border_width=2,
-    )
-    L_input = ft.TextField(
-        label="L",
-        value="4",
-        label_style=ft.TextStyle(size=24),
-        hint_text="Нормативное расстояние между спринклерами, м",
-        tooltip="Нормативное расстояние между спринклерами, м.\nПротивоположный катет.",
-        prefix_icon=ft.icons.EDIT_OUTLINED,
-        prefix_text="* ",
-        border_width=2,
-    )
-    epsilon_input = ft.TextField(
-        label="\u03b5",
-        value="0.85",
-        label_style=ft.TextStyle(size=24),
-        hint_text="Коэффициент облучённости",
-        tooltip="Эмиссивность материала горючей нагрузки",
-        prefix_icon=ft.icons.EDIT_OUTLINED,
-        prefix_text="* ",
-        border_width=2,
-    )
-    # Dropdown для выбора типа головки спринклера
-    sprinkler_type_dropdown = ft.Dropdown(
-        label="Головка",
-        options=[
-            ft.dropdown.Option("Стальная"),
-            ft.dropdown.Option("Медная"),
-            ft.dropdown.Option("Латунная"),
-        ],
-        value="Стальная головка",  # Значение по умолчанию
-        label_style=ft.TextStyle(size=18),
-        prefix_icon=ft.icons.EDIT_OUTLINED,
-        prefix_text="* ",
-        border_width=2,
-    )
-    k_input = ft.TextField(
-        label="k",
-        value="2",
-        label_style=ft.TextStyle(size=24),
-        hint_text="Коэффициент, описывающий отношение поверхности горючей нагрузки к площади помещения",
-        tooltip="k = 2 для Ф1-Ф4\nk = 4 для Ф5.2 при высоте хранения до 5.5м\nk = 10 для Ф5.2 при высоте хранения свыше 5.5м\nНе вычисляется для Ф5.1",
-        prefix_icon=ft.icons.EDIT_OUTLINED,
-        prefix_text="* ",
-        border_width=2,
-    )
-    Tu_0_input = ft.TextField(
-        label="Tu\u2080",
-        value="24",
-        label_style=ft.TextStyle(size=24),
-        hint_text="Максимально возможная в течение года температура, \u00b0C",
-        tooltip="Максимально возможная в течение года температура,\nона же - начальная температура чувствительного элемента спринклера, \u00b0C",
-        prefix_icon=ft.icons.EDIT_OUTLINED,
-        prefix_text="* ",
-        border_width=2,
-    )
-    Tu_i_input = ft.TextField(
-        label="Tu\u1d62",
-        value="57",
-        label_style=ft.TextStyle(size=24),
-        hint_text="Критическая температура чувствительного элемента спринклера, \u00b0C",
-        tooltip="Критическая температура чувствительного элемента спринклера, \u00b0C",
-        prefix_icon=ft.icons.EDIT_OUTLINED,
-        prefix_text="* ",
-        border_width=2,
-    )
+        # Set up status bar
+        self.statusBar = QStatusBar() 
+        self.setStatusBar(self.statusBar)
+        self.statusBar.showMessage("Готово к расчёту")
 
-    # Поля для отображения результатов
-    alpha_input = ft.TextField(
-        label="\u03b1",
-        label_style=ft.TextStyle(size=24),
-        read_only=True,
-        hint_text="Коэффициент пропускания атмосферы",
-        tooltip="Оптическая толщина атмосферы (коэффициент пропускания атмосферы).\nРассчитывается эмпирическим путём (см. Методику 533).",
-        prefix_icon=ft.icons.EDIT_OFF_OUTLINED,
-        prefix_text="= ",
-        border_width=2,
-    )
-    hu_result = ft.TextField(
-        label="hu",
-        label_style=ft.TextStyle(size=24),
-        read_only=True,
-        hint_text="Высота (м)",
-        tooltip="Высота расположения термочувствительного элемента спринклера (м)",
-        prefix_icon=ft.icons.EDIT_OFF_OUTLINED,
-        prefix_text="= ",
-        border_width=2,
-    )
-    angle_result = ft.TextField(
-        label="angle",
-        label_style=ft.TextStyle(size=24),
-        read_only=True,
-        hint_text="Угловой коэффициент теплового переноса",
-        tooltip="Угловой коэффициент теплового переноса",
-        prefix_icon=ft.icons.EDIT_OFF_OUTLINED,
-        prefix_text="= ",
-        border_width=2,
-    )
-    tmax_result = ft.TextField(
-        label="tmax",
-        label_style=ft.TextStyle(size=24),
-        read_only=True,
-        hint_text="Время охвата пожаром всей поверхности горючей нагрузки в помещении (сек)",
-        tooltip="Время охвата пожаром всей поверхности горючей нагрузки в помещении (сек)",
-        prefix_icon=ft.icons.EDIT_OFF_OUTLINED,
-        prefix_text="= ",
-        border_width=2,
-    )
-    t_mod_result = ft.TextField(
-        label="t_mod",
-        label_style=ft.TextStyle(size=24),
-        read_only=True,
-        prefix_icon=ft.icons.EDIT_OFF_OUTLINED,
-        prefix_text="= ",
-        border_width=2,
-    )
-    t_result = ft.TextField(
-        label="tобн_инерц",
-        label_style=ft.TextStyle(size=24),
-        read_only=True,
-        hint_text="Время задержки, связанное с инерционностью АУПТ (сек)",
-        tooltip="Время задержки, связанное с инерционностью АУПТ (сек)",
-        prefix_icon=ft.icons.EDIT_OFF_OUTLINED,
-        prefix_text="= ",
-        border_width=2,
-    )
-    tT_result = ft.TextField(
-        label="tпор",
-        label_style=ft.TextStyle(size=24),
-        read_only=True,
-        hint_text="Время достижения порогового значения срабатывания АУПТ (сек)",
-        tooltip="Время достижения порогового значения срабатывания АУПТ (сек)",
-        prefix_icon=ft.icons.EDIT_OFF_OUTLINED,
-        prefix_text="= ",
-        border_width=2,
-    )
+    def _setup_palette(self):
+        palette = QPalette()
+        palette.setColor(QPalette.ColorRole.Window, QColor(248, 250, 252))
+        palette.setColor(QPalette.ColorRole.WindowText, QColor(30, 41, 59))
+        palette.setColor(QPalette.ColorRole.Base, QColor(255, 255, 255))
+        palette.setColor(QPalette.ColorRole.AlternateBase, QColor(241, 245, 249))
+        palette.setColor(QPalette.ColorRole.ToolTipBase, QColor(255, 255, 255))
+        palette.setColor(QPalette.ColorRole.ToolTipText, QColor(30, 41, 59)) 
+        palette.setColor(QPalette.ColorRole.Text, QColor(30, 41, 59))
+        palette.setColor(QPalette.ColorRole.Button, QColor(186, 230, 253))
+        palette.setColor(QPalette.ColorRole.ButtonText, QColor(3, 105, 161))
+        palette.setColor(QPalette.ColorRole.Highlight, QColor(125, 211, 252))
+        palette.setColor(QPalette.ColorRole.HighlightedText, QColor(30, 41, 59))
+        self.setPalette(palette)
 
-    # Виджет для отображения графика
-    plot_image = ft.Image(src_base64=None, width=800, height=600)
+    def _get_input_style(self):
+        return """
+            QLineEdit {
+                padding: 8px;
+                border: 1px solid #cbd5e1;
+                border-radius: 5px;
+                background-color: white;
+                font-size: 14px;
+            }
+            QLineEdit:focus {
+                border: 2px solid #7dd3fc;
+            }
+        """
 
-    # FilePicker для сохранения графика
-    save_file_dialog = ft.FilePicker()
-    page.overlay.append(save_file_dialog)
-    page.update()
+    def _get_button_style(self):
+        return """
+            QPushButton {
+                background-color: #bae6fd;
+                color: #0369a1;
+                border: none;
+                border-radius: 5px;
+                padding: 10px 15px;
+                font-weight: bold;
+                font-size: 14px;
+                min-width: 120px;
+            }
+            QPushButton:hover {
+                background-color: #7dd3fc;
+            }
+            QPushButton:pressed {
+                background-color: #0284c7;
+                color: white;
+            }
+            QPushButton:disabled {
+                background-color: #e2e8f0;
+                color: #94a3b8;
+            }
+        """
 
-    # Глобальная переменная для x_mark
-    global x_mark
-    x_mark = None
+    def _create_input_field(self, layout, name, label_text, default_value, tooltip_text, is_float=True):
+        label = QLabel(label_text + ":")
+        label.setFont(QFont("Segoe UI", 12))
+        setattr(self, f"{name}_label", label) # Store label reference
 
-    def calculate(e):
-        global time, Fpom, HRR, v, psi_yd, Cs, Hpom, L, epsilon, alpha, K, k, Tu_0, Tu_i, hu, angle, tmax, t_mod, q, phi, beta, Delta, sigma, g, x_mark, temperatures_gas, critical_time_gas, Tu_solution, x_mark_dTu, y_mark_dTu
+        line_edit = QLineEdit(default_value)
+        line_edit.setToolTip(tooltip_text)
+        line_edit.setStyleSheet(self._get_input_style())
+        if is_float:
+            validator = QDoubleValidator()
+            validator.setLocale(QLocale(QLocale.Language.English, QLocale.Country.UnitedStates)) # For '.' decimal separator
+            line_edit.setValidator(validator)
+        else:
+            validator = QIntValidator()
+            line_edit.setValidator(validator)
+        setattr(self, name, line_edit)
+        layout.addRow(label, line_edit)
+
+    def _create_output_field(self, layout, name, label_text, tooltip_text):
+        label = QLabel(label_text + ":")
+        label.setFont(QFont("Segoe UI", 12))
+
+        line_edit = QLineEdit()
+        line_edit.setReadOnly(True)
+        line_edit.setToolTip(tooltip_text)
+        line_edit.setStyleSheet(self._get_input_style())
+        setattr(self, name, line_edit)
+        layout.addRow(label, line_edit)
+
+    def _setup_ui(self):
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout = QHBoxLayout() # Fix: Remove central_widget as parent
+        main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.setSpacing(20)
+
+        # Left Column: Input Fields
+        # Left Column: Input Fields
+        left_widget = QWidget()
+        left_layout = QFormLayout(left_widget) # Use QFormLayout for alignment
+        left_layout.setContentsMargins(10, 10, 10, 10) # Add some padding inside the form layout
+        left_layout.setSpacing(10)
+
+        header_label = QLabel("Введите значения\nпеременных")
+        header_style = "font-size: 14px; font-weight: bold; color: #0284c7;"
+        header_label.setStyleSheet(header_style)
+        left_layout.addWidget(header_label)
+
+        # Input Fields with Labels
+        self._create_input_field(left_layout, "Fpom_input", "Fпом", "500", "Площадь помещения с очагом пожара, м²")
+        self._create_input_field(left_layout, "HRR_input", "HRR", "13.800", "Низшая теплота сгорания, МДж/м²")
+        self._create_input_field(left_layout, "v_input", "v", "0.0055", "Линейная скорость распространения пламени, м/с")
+        self._create_input_field(left_layout, "psi_yd_input", "ψуд", "0.015", "Удельная массовая скорость выгорания, кг/(с*м²)")
+        self._create_input_field(left_layout, "Cs_input", "Cs", "0.1", "Размер ячейки, м")
+        self._create_input_field(left_layout, "Hpom_input", "Hпом", "3", "Высота помещения, м")
+        self._create_input_field(left_layout, "L_input", "L", "4", "Нормативное расстояние между спринклерами, м")
+        self._create_input_field(left_layout, "epsilon_input", "ε", "0.85", "Коэффициент облучённости")
+
+        # Dropdown for sprinkler type
+        sprinkler_type_label = QLabel("Головка:")
+        sprinkler_type_label.setStyleSheet("font-size: 14px;")
+        self.sprinkler_type_dropdown = QComboBox()
+        self.sprinkler_type_dropdown.addItems(["Стальная", "Медная", "Латунная"])
+        self.sprinkler_type_dropdown.setCurrentText("Стальная")
+        self.sprinkler_type_dropdown.setStyleSheet(self._get_input_style())
+        left_layout.addRow(sprinkler_type_label, self.sprinkler_type_dropdown) # Changed to addRow
+
+        self._create_input_field(left_layout, "k_input", "k", "2", "Коэффициент, описывающий отношение поверхности горючей нагрузки к площади помещения")
+        self._create_input_field(left_layout, "Tu_0_input", "Tu₀", "24", "Максимально возможная в течение года температура, °C", is_float=True)
+        self._create_input_field(left_layout, "Tu_i_input", "Tuᵢ", "57", "Критическая температура чувствительного элемента спринклера, °C", is_float=True)
         
+        # Add stretch to push inputs to the top within the scrollable widget
+        # QFormLayout doesn't directly support stretch, so we add a spacer or let it fill
+        # If QFormLayout fills space, stretch might not be needed, but let's keep it for now
+        # If alignment issues arise, a spacer widget can be added within the form layout if necessary
+
+        # Add the scrollable widget to the main layout
+        main_layout.addWidget(left_widget)
+
+        # Center Column: Plot Area and Main Heading
+        center_widget = QWidget()
+        center_layout = QVBoxLayout(center_widget)
+        center_layout.setContentsMargins(0, 0, 0, 0)
+        center_layout.setSpacing(10)
+
+        main_heading = QLabel("Расчёт времени задержки, связанного с инерционностью АУПТ")
+        main_heading.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        main_heading.setStyleSheet("font-size: 24px; font-weight: 100;")
+        center_layout.addWidget(main_heading)
+
+        self.plot_label = QLabel("График будет отображен здесь")
+        self.plot_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.plot_label.setMinimumSize(800, 600) # Match original Flet plot size
+        self.plot_label.setStyleSheet("border: 1px solid #cbd5e1; background-color: white;")
+        center_layout.addWidget(self.plot_label)
+        center_layout.addStretch(1) # Push elements to top
+        main_layout.addWidget(center_widget)
+
+        # Right Column: Output Fields
+        right_container_widget = QWidget()
+        right_container_layout = QVBoxLayout(right_container_widget)
+        right_container_layout.setContentsMargins(0, 0, 0, 0) # No extra margins for the container
+
+        right_form_widget = QWidget()
+        right_layout = QFormLayout(right_form_widget) # Use QFormLayout for output fields
+        right_layout.setContentsMargins(10, 10, 10, 10) # Add padding inside the form
+        right_layout.setSpacing(10)
+
+        result_heading = QLabel("Результаты")
+        result_heading.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        result_style = "font-size: 14px; font-weight: bold; color: #0284c7;"
+        result_heading.setStyleSheet(result_style)
+        right_layout.addWidget(result_heading)
+
+        self._create_output_field(right_layout, "alpha_output", "α", "Коэффициент пропускания атмосферы")
+        self._create_output_field(right_layout, "hu_output", "hu", "Высота расположения термочувствительного элемента спринклера (м)")
+        self._create_output_field(right_layout, "angle_output", "angle", "Угловой коэффициент теплового переноса")
+        self._create_output_field(right_layout, "tmax_output", "tmax", "Время охвата пожаром всей поверхности горючей нагрузки в помещении (сек)")
+        self._create_output_field(right_layout, "t_result_output", "tобн_инерц", "Время задержки, связанное с инерционностью АУПТ (сек)")
+        self._create_output_field(right_layout, "tT_result_output", "tпор", "Время достижения порогового значения срабатывания АУПТ (сек)")
+
+        right_container_layout.addWidget(right_form_widget)
+        right_container_layout.addStretch(1) # Push form content to top within the container
+        main_layout.addWidget(right_container_widget)
+
+        # Buttons at the bottom
+        button_layout = QHBoxLayout()
+        button_layout.setContentsMargins(0, 0, 0, 0)
+        button_layout.setSpacing(50)
+
+        self.calculate_button = QPushButton("Рассчитать")
+        self.calculate_button.setStyleSheet(self._get_button_style())
+        button_layout.addWidget(self.calculate_button)
+
+        self.save_plot_button = QPushButton("Сохранить изображение графика")
+        self.save_plot_button.setStyleSheet(self._get_button_style())
+        button_layout.addWidget(self.save_plot_button)
+        
+        # Add button_layout to the main vertical layout of the central widget
+        # Since main_layout is QHBoxLayout, we need a parent QVBoxLayout for everything
+        # Re-structuring: central_widget's layout should be QVBoxLayout first
+        # Then add the main_layout (QHBoxLayout for columns) and button_layout (QHBoxLayout)
+        
+        temp_main_v_layout = QVBoxLayout()
+        temp_main_v_layout.addLayout(main_layout)
+        temp_main_v_layout.addLayout(button_layout)
+        central_widget.setLayout(temp_main_v_layout) # Set this as the central widget's layout
+
+    def sprinkler_sensor_temp(self, Tu, t, T_func):
+        T = T_func(t)
+        if T < self.Tu_0:
+            return 0
+        return np.sqrt(self.u_dynamic(T)) / self.K * (T - Tu)
+
+    def gas_temperature(self, t):
+        if self.Delta_func is None or self.q_func is None:
+            # This should ideally not happen if calculate() is called first
+            raise ValueError("Ошибка: Функции Delta_func или q_func не инициализированы.")
+        T = ((1 / self.Delta_func(t)) * (self.q_func(t) / (self.epsilon * self.sigma)) * np.exp(-(self.alpha * self.hu))) ** (1/4)
+        return max(T, self.Tu_0)
+
+    def u_dynamic(self, T):
+        return np.sqrt(2 * self.g * self.hu * (T / (self.Tu_0 + 273.15)))
+
+    def Psi(self, t):
+        if self.q_func is None:
+            raise ValueError("Ошибка: Функция q_func не инициализирована.")
+        return self.q_func(t)
+
+    def heat_release_rate(self, t):
+        return self.Psi(t) * 1000 * 0.93
+
+    def temperature_rise(self, Q):
+        # L is actually self.L from input
+        return Q**(7/4) / (self.rho * self.cp * np.sqrt(self.g) * self.L**2 * self.hu**(5/3))
+
+    def calculate(self):
         try:
-            Fpom = float(Fpom_input.value)
-            HRR = float(HRR_input.value)
-            v = float(v_input.value)
-            psi_yd = float(psi_yd_input.value)
-            Cs = float(Cs_input.value)
-            Hpom = float(Hpom_input.value)
-            L = float(L_input.value)
-            epsilon = float(epsilon_input.value)
-            k = float(k_input.value)
-            Tu_0 = float(Tu_0_input.value)
-            Tu_i = float(Tu_i_input.value)
-            T_ambient = Tu_0
+            # Input parsing and validation
+            self.Fpom = float(self.Fpom_input.text())
+            self.HRR = float(self.HRR_input.text())
+            self.v = float(self.v_input.text())
+            self.psi_yd = float(self.psi_yd_input.text())
+            self.Cs = float(self.Cs_input.text())
+            self.Hpom = float(self.Hpom_input.text())
+            self.L = float(self.L_input.text())
+            self.epsilon = float(self.epsilon_input.text())
+            self.k = float(self.k_input.text())
+            self.Tu_0 = float(self.Tu_0_input.text())
+            self.Tu_i = float(self.Tu_i_input.text())
 
-            # Выбор материала спринклера
-            if sprinkler_type_dropdown.value == "Стальная":
-                K = np.sqrt((0.265 * 0.46) / 0.05)
-            elif sprinkler_type_dropdown.value == "Медная":
-                K = np.sqrt((0.265 * 0.385) / 0.385)
-            elif sprinkler_type_dropdown.value == "Латунная":
-                K = np.sqrt((0.265 * 0.375) / 0.11)
-            else:
-                K = 50
-
-            hu = Hpom - Cs
-            angle = np.arctan(L / hu)
-            tmax = np.sqrt((k * Fpom) / (np.pi * v**2))
-            t_mod = tmax
-            q = lambda t: HRR * psi_yd * np.pi * v**2 * t**2 if t < tmax else HRR * psi_yd * np.pi * v**2 * tmax**2
-            phi = lambda t: np.sqrt(1 + v**2 * t**2)
-            beta = np.sqrt(1 + angle * (np.pi / 180))
-            Delta = lambda t: np.arctan(phi(t)) * np.arctan(beta)
-            sigma = 5.670374419e-8
-            g = 9.81
-            d = np.sqrt((4 * Fpom) / np.pi)
-            alpha = 10e-4 * np.exp(-7 * 10e-4 * (L - 0.5*d))
-
-            rho = 1.2   # Плотность воздуха (кг/м³)
-            cp = 1.005  # Удельная теплоёмкость воздуха (кДж/(кг·K))
-            z = hu  # Высота до спринклера (м)
-
-            def Psi(t):
-                return q(t)
-
-            def heat_release_rate(t):
-                return Psi(t) * 1000 * 0.93
-
-            def temperature_rise(Q):
-                return Q**(7/4) / (rho * cp * np.sqrt(g) * L**2 * z**(5/3))
-
-            # Временной порог вычислений
-            time = np.linspace(0, tmax, 10**6)
-
-            # Находим температуру газов
-            temperatures_gas = [T_ambient + temperature_rise(heat_release_rate(t)) for t in time]
-
-            # Находим критическую температуру на момент времени
-            critical_time_gas = next((t for t, temp in zip(time, temperatures_gas) if temp >= Tu_i), None)
-
-            # Интеграл
-            Tu_solution = odeint(
-                sprinkler_sensor_temp,
-                Tu_0,
-                time,
-                args=(gas_temperature,)
-            )
+            if not all(val > 0 for val in [self.Fpom, self.HRR, self.v, self.psi_yd, self.Cs, self.Hpom, self.L, self.epsilon, self.k, self.Tu_0, self.Tu_i]):
+                raise ValueError("Все входные параметры должны быть положительными числами.")
             
-            x_mark_dTu, y_mark_dTu = None, None
-            for i in range(len(Tu_solution)):
-                if Tu_solution[i, 0] >= Tu_i:
-                    x_mark_dTu = time[i]
-                    y_mark_dTu = Tu_solution[i, 0]
+            # Select K based on sprinkler type
+            sprinkler_type = self.sprinkler_type_dropdown.currentText()
+            if sprinkler_type == "Стальная":
+                self.K = np.sqrt((0.265 * 0.46) / 0.05)
+            elif sprinkler_type == "Медная":
+                self.K = np.sqrt((0.265 * 0.385) / 0.385)
+            elif sprinkler_type == "Латунная":
+                self.K = np.sqrt((0.265 * 0.375) / 0.11)
+            else:
+                self.K = 50 # Default or error handling
+
+            # Calculate intermediate parameters
+            self.hu = self.Hpom - self.Cs
+            if self.hu <= 0:
+                raise ValueError("Высота спринклера (hu) должна быть положительной (Hpom > Cs).")
+
+            self.angle = np.arctan(self.L / self.hu)
+            self.tmax = np.sqrt((self.k * self.Fpom) / (np.pi * self.v**2))
+            
+            # Dynamically assign lambda functions that depend on calculated instance variables
+            # These must be assigned AFTER all their dependencies (self.HRR, self.v, self.tmax etc.) are set
+            self.phi_func = lambda t: np.sqrt(1 + self.v**2 * t**2)
+            # beta_val is a float, not a function
+            self.beta_val = np.sqrt(1 + self.angle * (np.pi / 180)) 
+            # Delta_func depends on phi_func and beta_val, so it must be defined after them
+            self.Delta_func = lambda t: np.arctan(self.phi_func(t)) * np.arctan(self.beta_val)
+            self.q_func = lambda t: self.HRR * self.psi_yd * np.pi * self.v**2 * t**2 if t < self.tmax else self.HRR * self.psi_yd * np.pi * self.v**2 * self.tmax**2
+            
+            self.d = np.sqrt((4 * self.Fpom) / np.pi)
+            self.alpha = 10e-4 * np.exp(-7 * 10e-4 * (self.L - 0.5 * self.d))
+
+            # Time array for calculations
+            self.time = np.linspace(0, self.tmax * 2, 10000) # Extend time range slightly beyond tmax for gas temp trend
+
+            # Calculate gas temperatures
+            self.temperatures_gas = [self.Tu_0 + self.temperature_rise(self.heat_release_rate(t)) for t in self.time]
+
+            # Find critical time for gas temperature
+            self.critical_time_gas = next((t for t, temp in zip(self.time, self.temperatures_gas) if temp >= self.Tu_i), None)
+
+            # Integrate sprinkler sensor temperature
+            # Ensure sprinkler_sensor_temp and gas_temperature use 'self' correctly
+            self.Tu_solution = odeint(self.sprinkler_sensor_temp, self.Tu_0, self.time, args=(self.gas_temperature,))
+            
+            self.x_mark_dTu, self.y_mark_dTu = None, None
+            for i in range(len(self.Tu_solution)):
+                if self.Tu_solution[i, 0] >= self.Tu_i:
+                    self.x_mark_dTu = self.time[i]
+                    self.y_mark_dTu = self.Tu_solution[i, 0]
                     break
 
-            # Обновляем результаты в интерфейса
-            hu_result.value = f"{hu:.4f}"
-            angle_result.value = f"{angle:.4f}"
-            tmax_result.value = f"{tmax:.4f}"
-            t_result.value = f"{x_mark_dTu:.2f}" if x_mark_dTu is not None else "N/A"
-            tT_result.value = f"{critical_time_gas:.2f}" if critical_time_gas is not None else "N/A"
-            alpha_input.value = f"{alpha:.7f}"
-
-            calculate_button.color = "GREY400"
-            calculate_button.update()
+            # Update output fields
+            self.hu_output.setText(f"{self.hu:.4f}")
+            self.angle_output.setText(f"{self.angle:.4f}")
+            self.tmax_output.setText(f"{self.tmax:.4f}")
+            self.alpha_output.setText(f"{self.alpha:.7f}")
+            self.t_result_output.setText(f"{self.x_mark_dTu:.2f}" if self.x_mark_dTu is not None else "N/A") 
+            self.tT_result_output.setText(f"{self.critical_time_gas:.2f}" if self.critical_time_gas is not None else "N/A")
             
-            page.update()
+            self.statusBar.showMessage("Расчет завершен успешно.")
+            self.save_plot_button.setEnabled(True)
+            self.generate_plot()
 
-            generate_plot(e)
+        except ValueError as ve:
+            QMessageBox.warning(self, "Ошибка ввода", f"Пожалуйста, введите допустимые положительные числа!\n{ve}")
+            self.statusBar.showMessage("Ошибка ввода.")
+            self.save_plot_button.setEnabled(False)
+        except ZeroDivisionError:
+            QMessageBox.warning(self, "Ошибка расчета", "Деление на ноль. Проверьте входные параметры.")
+            self.statusBar.showMessage("Ошибка расчета: Деление на ноль.")
+            self.save_plot_button.setEnabled(False)
+        except Exception as e:
+            QMessageBox.critical(self, "Критическая ошибка", f"Произошла непредвиденная ошибка: {type(e).__name__}: {e}")
+            self.statusBar.showMessage("Произошла критическая ошибка.")
+            self.save_plot_button.setEnabled(False)
 
-        except ValueError:
-            snack_bar = ft.SnackBar(
-                content=ft.Text("Пожалуйста, введите допустимые положительные числа в поля ввода!", text_align=ft.TextAlign.CENTER, size=18, weight=ft.FontWeight.W_100, selectable=True, height="25")
-            )
-            page.overlay.append(snack_bar)
-            snack_bar.open = True
-            page.update()
+    def generate_plot(self):
+        try:
+            if self.time is None or len(self.time) == 0:
+                self.plot_label.setText("Нет данных для построения графика.")
+                return
 
-    def generate_plot(e):
-        global temperatures_gas, critical_time_gas, Tu_solution, x_mark_dTu, y_mark_dTu, time
+            # Determine plot cut-off time more robustly
+            max_plot_time = max(self.critical_time_gas or 0, self.x_mark_dTu or 0)
+            if max_plot_time == 0: # If both are None or 0, use tmax
+                max_plot_time = self.tmax
+            
+            # Ensure cut_time is reasonable and within self.time range
+            # Add some buffer to the max_plot_time
+            buffer_time = max(10, max_plot_time * 0.1) # at least 10 seconds or 10% of max_plot_time
+            cut_time = max_plot_time + buffer_time
 
-        # Определяем участок среза графиков исходя из критических температур
-        cut_time = max(critical_time_gas or 0, x_mark_dTu or 0) + random.randrange(int(Tu_0), int(Tu_i), 2)
-        cut_index = np.searchsorted(time, cut_time)
+            cut_index = np.searchsorted(self.time, cut_time)
+            # Ensure cut_index is not out of bounds
+            if cut_index == 0: cut_index = 1 # At least one point
+            if cut_index > len(self.time): cut_index = len(self.time)
 
-        # Режем
-        time_cut = time[:cut_index]
-        temperatures_gas_cut = temperatures_gas[:cut_index]
-        Tu_solution_cut = Tu_solution[:cut_index]
+            time_cut = self.time[:cut_index]
+            temperatures_gas_cut = self.temperatures_gas[:cut_index]
+            Tu_solution_cut = self.Tu_solution[:cut_index]
 
-        # Двойная ордината
-        fig, ax1 = plt.subplots(figsize=(10, 6))
+            fig, ax1 = plt.subplots(figsize=(10, 6))
 
-        # Рисуем dTu на левой ординате
-        ax1.set_ylabel('Температура чувствительного элемента спринклера (dTu) [°C]', color='black')
-        ax1.plot(time_cut, Tu_solution_cut[:, 0], label="dTu", color='black', linewidth=5, linestyle=':')
-        if x_mark_dTu is not None and y_mark_dTu is not None:
-            ax1.scatter(x_mark_dTu, y_mark_dTu, color='red', marker='x', s=200, label=f"dTu = {Tu_i} °C\ntобн_инерц = {x_mark_dTu:.2f} сек")
-        ax1.tick_params(axis='y', labelcolor='black')
-        ax1.tick_params(axis='x', colors='black')
+            # Plot dTu on the left y-axis
+            ax1.set_ylabel('Температура чувствительного элемента спринклера (Tᵤ) [°C]', color='black')
+            ax1.plot(time_cut, Tu_solution_cut[:, 0], label="Tᵤ", color='black', linewidth=3, linestyle='-')
+            if self.x_mark_dTu is not None and self.y_mark_dTu is not None:
+                ax1.scatter(self.x_mark_dTu, self.y_mark_dTu, color='blue', marker='o', s=150, zorder=5, label=f"Tᵤ = {self.Tu_i} °C\ntобн_инерц = {self.x_mark_dTu:.2f} сек")
+                ax1.axhline(y=self.Tu_i, color='blue', linestyle='--', lw=1, label=f'Критическая темп. Tᵤ = {self.Tu_i:.2f} °C', alpha=0.7)
+            ax1.tick_params(axis='y', labelcolor='black')
+            ax1.tick_params(axis='x', colors='black')
 
-        # Рисуем температуру газа на правой ординате
-        ax2 = ax1.twinx()
-        ax2.set_ylabel('Температура газов [°C]', color='red')
-        ax2.plot(time_cut, temperatures_gas_cut, color='red', label="Температура газов")
-        if critical_time_gas is not None:
-            ax2.scatter(critical_time_gas, Tu_i, color='red', marker='o', s=100, label=f"tпор = {critical_time_gas:.2f} сек")
-        ax2.tick_params(axis='y', labelcolor='red')
-        
-        ax1.set_xlabel(f'Время (с)\nДля Ф1: tнэ = {critical_time_gas:.2f} + {x_mark_dTu:.2f} + 0 + 60 = {critical_time_gas + x_mark_dTu + 0 + 60:.2f}\nДля Ф2-Ф5: tнэ = {critical_time_gas:.2f} + {x_mark_dTu:.2f} + 0 + 30 = {critical_time_gas + x_mark_dTu + 0 + 30:.2f}', color='black')
+            # Plot gas temperature on the right y-axis
+            ax2 = ax1.twinx()
+            ax2.set_ylabel('Температура газов (T) [°C]', color='red')
+            ax2.plot(time_cut, temperatures_gas_cut, color='red', label="Температура газов")
+            if self.critical_time_gas is not None:
+                ax2.scatter(self.critical_time_gas, self.Tu_i, color='red', marker='x', s=150, zorder=5, label=f"T = {self.Tu_i} °C\ntпор = {self.critical_time_gas:.2f} сек")
+                ax2.axhline(y=self.Tu_i, color='red', linestyle=':', lw=1, label=f'Пороговая темп. T = {self.Tu_i:.2f} °C', alpha=0.7)
+            ax2.tick_params(axis='y', labelcolor='red')
+            
+            # X-axis label with dynamic calculation results (if available)
+            tneh_f1 = "N/A"
+            tneh_f2_f5 = "N/A"
+            if self.critical_time_gas is not None and self.x_mark_dTu is not None:
+                tneh_f1 = f"{self.critical_time_gas:.2f} + {self.x_mark_dTu:.2f} + 0 + 60 = {self.critical_time_gas + self.x_mark_dTu + 0 + 60:.2f}"
+                tneh_f2_f5 = f"{self.critical_time_gas:.2f} + {self.x_mark_dTu:.2f} + 0 + 30 = {self.critical_time_gas + self.x_mark_dTu + 0 + 30:.2f}"
+            ax1.set_xlabel(f'Время (с)\nДля Ф1: tн.э. = {tneh_f1}\nДля Ф2-Ф5: tн.э. = {tneh_f2_f5}', color='black')
 
-        # Границы красим в чёрный цвет
-        for spine in ax1.spines.values():
-            spine.set_edgecolor('black')
+            # Set border colors
+            for spine in ax1.spines.values():
+                spine.set_edgecolor('black')
+            for spine in ax2.spines.values():
+                spine.set_edgecolor('black')
 
-        for spine in ax2.spines.values():
-            spine.set_edgecolor('black')
+            # Title and legend
+            fig.suptitle("График прогрева термочувствительного элемента спринклера (Tᵤ) до температуры (T),\nсоответствующей порогу срабатывания (Tᵤᵢ)", color='black', y=0.95)
+            lines, labels = ax1.get_legend_handles_labels()
+            lines2, labels2 = ax2.get_legend_handles_labels()
+            legend = ax1.legend(lines + lines2, labels + labels2, loc='upper left', labelcolor='black', prop={'size': 9}) 
+            plt.setp(legend.get_texts(), color='black')
 
-        # Добавляем горизонтальные линии для L и input_threshold на соответствующих осях
-        ax1.axhline(y=y_mark_dTu, color='black', linestyle=(0, (1, 5)), lw=2, label=f'Темп. колб. = {critical_time_gas:.2f} (°C)', alpha=0.5)
-        ax2.axhline(y=y_mark_dTu, color='red', linestyle=(0, (1, 5)), lw=2, label=f'Темп. газ. = {y_mark_dTu:.2f} (°C)', alpha=0.5)
+            # Grid
+            ax1.grid(True)
 
-        # Заголовок и легенда
-        fig.suptitle("График прогрева термочувствительного элемента спринклера (dTu) до температуры (T),\nсоответствующей порогу срабатывания (Tu)", color='black', y=0.95)
-        lines, labels = ax1.get_legend_handles_labels()
-        lines2, labels2 = ax2.get_legend_handles_labels()
-        legend = ax1.legend(lines + lines2, labels + labels2, loc='center left', labelcolor='black', prop={'size': 8})
-        plt.setp(legend.get_texts(), color='black')
+            # Save plot to buffer
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png', bbox_inches='tight')
+            buf.seek(0)
+            plt.close(fig) # Close the figure to free memory
 
-        # Сеточка
-        ax1.grid(True)
+            # Convert to QPixmap and display
+            pixmap = QPixmap()
+            pixmap.loadFromData(buf.getvalue(), "PNG")
+            self.plot_label.setPixmap(pixmap.scaled(self.plot_label.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+            self.plot_pixmap = pixmap # Store for saving
 
-        # Храним изображение графика в памяти для отображение в Flet
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png', bbox_inches='tight')
-        buf.seek(0)
-        plot_base64_combined = base64.b64encode(buf.read()).decode('utf-8')
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка построения графика", f"Не удалось построить график: {type(e).__name__}: {e}")
+            self.statusBar.showMessage("Ошибка построения графика.")
+            self.plot_label.setText("Ошибка при построении графика.")
+            self.plot_pixmap = None # Clear stored pixmap
 
-        # Обновляем изображение графика в интерфейсе
-        plot_image.src_base64 = plot_base64_combined
-        plot_image.update()
+    def save_plot(self):
+        if self.plot_pixmap is None:
+            QMessageBox.warning(self, "Ошибка сохранения", "Нет графика для сохранения. Сначала выполните расчет.")
+            self.statusBar.showMessage("Нет графика для сохранения.")
+            return
 
-        # После расчёта кнопка "Сохранить" становится активна
-        save_plot_button.disabled = False
-        page.update()
+        file_path, _ = QFileDialog.getSaveFileName(self, "Сохранить график", "dTu_plot.png", "PNG Image (*.png);;All Files (*)")
+        if file_path:
+            try:
+                self.plot_pixmap.save(file_path, "PNG")
+                self.statusBar.showMessage(f"График сохранён в {file_path}")
+            except Exception as e:
+                QMessageBox.critical(self, "Ошибка сохранения", f"Не удалось сохранить график: {e}")
+                self.statusBar.showMessage("Ошибка сохранения графика.")
 
-    def save_plot(e):
-        # Запрос у пользователя выбора папки и имени файла
-        save_file_dialog.save_file(
-            allowed_extensions=["png"],
-            file_name="dTu_plot.png"
-        )
-        save_plot_button.color = "GREY400"
-        save_plot_button.update()
-
-    def on_save_file_result(e: ft.FilePickerResultEvent):
-        if e.path:
-            # Сохранение графика по выбранному пути
-            with open(e.path, "wb") as f:
-                f.write(base64.b64decode(plot_image.src_base64))
-            print(f"График сохранён в {e.path}")
-
-            # Закрытие окна приложения
-            page.window.close()
-
-    # Кнопки
-    calculate_button = ft.ElevatedButton(
-        text="Рассчитать",
-        on_click=calculate,
-        style=ft.ButtonStyle(
-            padding=ft.padding.symmetric(horizontal=25, vertical=20),
-            shape=ft.RoundedRectangleBorder(radius=8),
-            text_style=ft.TextStyle(
-                size=15.0
-            )
-        )
-    )
-    save_plot_button = ft.ElevatedButton(
-        text="Сохранить изображение графика",
-        on_click=save_plot,
-        disabled=True,
-        style=ft.ButtonStyle(
-            padding=ft.padding.symmetric(horizontal=25, vertical=20),
-            shape=ft.RoundedRectangleBorder(radius=8),
-            text_style=ft.TextStyle(
-                size=15.0
-            )
-        )
-    )
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    # Set application font
+    app_font = QFont("Segoe UI", 10)
+    app.setFont(app_font)
     
-    # Размещаем кнопки в ряд
-    button_row = ft.Row(
-        controls=[
-            calculate_button,
-            save_plot_button,
-        ],
-        alignment=ft.MainAxisAlignment.CENTER,
-        spacing=50,
-    )
-
-    # Основной макет
-    main_layout = ft.Row(
-        controls=[
-            # Левая колонка: Поля ввода
-            ft.Column(
-                controls=[
-                    input_heading,
-                    Fpom_input,
-                    HRR_input,
-                    v_input,
-                    psi_yd_input,
-                    Cs_input,
-                    Hpom_input,
-                    L_input,
-                    epsilon_input,
-                    #alpha_input,
-                    sprinkler_type_dropdown,  # Добавлен Dropdown для выбора типа головки
-                    k_input,
-                    Tu_0_input,
-                    Tu_i_input,
-                ],
-                alignment=ft.MainAxisAlignment.START,
-                scroll=ft.ScrollMode.AUTO,
-                width=150,
-            ),
-            # Центральная колонка: График
-            ft.Column(
-                controls=[
-                    main_heading,
-                    plot_image, 
-                ],
-                alignment=ft.MainAxisAlignment.CENTER,
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                expand=True,
-            ),
-            # Правая колонка: Результаты
-            ft.Column(
-                controls=[
-                    result_heading,
-                    alpha_input,
-                    hu_result,
-                    angle_result,
-                    tmax_result,
-                    t_result,
-                    tT_result,
-                ],
-                alignment=ft.MainAxisAlignment.START,
-                width=200,
-            ),
-        ],
-        expand=True,
-    )
-
-    # Основной контейнер с кнопками внизу
-    page.add(
-        main_layout,
-        ft.Container(height=20),  # Вертикальный отступ выше
-        button_row,
-        ft.Container(height=50),  # Вертикальный отступ ниже
-    )
-
-    # Настройка обработчика событий FilePicker
-    save_file_dialog.on_result = on_save_file_result
-
-ft.app(target=main)
+    window = SprinklerCalcApp()
+    window.show()
+    sys.exit(app.exec())

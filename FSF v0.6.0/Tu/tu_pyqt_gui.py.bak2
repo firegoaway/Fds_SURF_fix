@@ -159,7 +159,8 @@ class SprinklerCalcApp(QMainWindow):
         left_layout_container.setContentsMargins(0,0,0,0)
 
         header_label = QLabel("Введите значения\nпеременных")
-        header_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #0284c7;")
+        header_style = "font-size: 14px; font-weight: bold; color: #0284c7;"
+        header_label.setStyleSheet(header_style)
         left_layout.addWidget(header_label)
 
         # Input Fields with Labels
@@ -213,14 +214,19 @@ class SprinklerCalcApp(QMainWindow):
         main_layout.addWidget(center_widget)
 
         # Right Column: Output Fields
-        right_widget = QWidget()
-        right_layout = QFormLayout(right_widget) # Use QFormLayout for output fields too
-        right_layout.setContentsMargins(10, 10, 10, 10) # Add padding
+        right_container_widget = QWidget()
+        right_container_layout = QVBoxLayout(right_container_widget)
+        right_container_layout.setContentsMargins(0, 0, 0, 0) # No extra margins for the container
+
+        right_form_widget = QWidget()
+        right_layout = QFormLayout(right_form_widget) # Use QFormLayout for output fields
+        right_layout.setContentsMargins(10, 10, 10, 10) # Add padding inside the form
         right_layout.setSpacing(10)
 
         result_heading = QLabel("Результаты")
         result_heading.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        result_heading.setStyleSheet("font-size: 14px; font-weight: bold; color: #0284c7;")
+        result_style = "font-size: 14px; font-weight: bold; color: #0284c7;"
+        result_heading.setStyleSheet(result_style)
         right_layout.addWidget(result_heading)
 
         self._create_output_field(right_layout, "alpha_output", "α", "Коэффициент пропускания атмосферы")
@@ -230,8 +236,9 @@ class SprinklerCalcApp(QMainWindow):
         self._create_output_field(right_layout, "t_result_output", "tобн_инерц", "Время задержки, связанное с инерционностью АУПТ (сек)")
         self._create_output_field(right_layout, "tT_result_output", "tпор", "Время достижения порогового значения срабатывания АУПТ (сек)")
 
-        right_layout.addStretch(1) # Push outputs to top
-        main_layout.addWidget(right_widget)
+        right_container_layout.addWidget(right_form_widget)
+        right_container_layout.addStretch(1) # Push form content to top within the container
+        main_layout.addWidget(right_container_widget)
 
         # Buttons at the bottom
         button_layout = QHBoxLayout()
