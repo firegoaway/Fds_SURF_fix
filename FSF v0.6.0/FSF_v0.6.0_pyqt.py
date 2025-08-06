@@ -1,14 +1,24 @@
-import sys
+try:
+    from fsf_utils import (setup_app_palette, get_input_style_common, get_button_style_common,
+                           get_group_box_style, get_label_style, create_input_field_common,
+                           load_from_ini_common, calculate_common, save_to_ini_common,
+                           read_ini_file_path, read_ini_file_hoc, process_fds_file_common)
+except ModuleNotFoundError:
+    import os
+    import sys
+    # Добавляем директорию, содержащую fsf_utils.py, в Python-путь
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    sys.path.insert(0, current_dir)
+    from fsf_utils import (setup_app_palette, get_input_style_common, get_button_style_common,
+                           get_group_box_style, get_label_style, create_input_field_common,
+                           load_from_ini_common, calculate_common, save_to_ini_common,
+                           read_ini_file_path, read_ini_file_hoc, process_fds_file_common)
+
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QLabel,
                              QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton,
                              QMessageBox, QGroupBox, QStatusBar)
 from PyQt6.QtGui import QFont, QIcon
 from PyQt6.QtCore import Qt, QTimer
-
-from fsf_utils import (setup_app_palette, get_input_style_common, get_button_style_common,
-                       get_group_box_style, get_label_style, create_input_field_common,
-                       load_from_ini_common, calculate_common, save_to_ini_common,
-                       read_ini_file_path, read_ini_file_hoc, process_fds_file_common)
 
 # Глобальная переменная для ProcessID
 ProcessID = None
