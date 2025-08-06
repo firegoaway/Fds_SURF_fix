@@ -2,7 +2,8 @@ try:
     from fsf_utils import (setup_app_palette, get_input_style_common, get_button_style_common,
                            get_group_box_style, get_label_style, create_input_field_common,
                            load_from_ini_common, calculate_common, save_to_ini_common,
-                           read_ini_file_path, read_ini_file_hoc, process_fds_file_common)
+                           read_ini_file_path, read_ini_file_hoc, process_fds_file_common,
+                           get_icon_path) # Add get_icon_path here
 except ModuleNotFoundError:
     import os
     import sys
@@ -12,7 +13,8 @@ except ModuleNotFoundError:
     from fsf_utils import (setup_app_palette, get_input_style_common, get_button_style_common,
                            get_group_box_style, get_label_style, create_input_field_common,
                            load_from_ini_common, calculate_common, save_to_ini_common,
-                           read_ini_file_path, read_ini_file_hoc, process_fds_file_common)
+                           read_ini_file_path, read_ini_file_hoc, process_fds_file_common,
+                           get_icon_path) # Add get_icon_path here
 
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QLabel,
                              QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton,
@@ -40,7 +42,8 @@ class FDSProcessorAppQt(QMainWindow):
 
         # Устанавливаем иконку приложения
         try:
-            self.setWindowIcon(QIcon('../.gitpics/fsf.ico'))
+            icon_path = get_icon_path(__file__, 'fsf.ico')
+            self.setWindowIcon(QIcon(icon_path))
         except Exception as e:
             print(f"Error setting window icon: {e}")
 
@@ -139,7 +142,8 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     # Устанавливаем иконку приложения
     try:
-        app.setWindowIcon(QIcon('../.gitpics/fsf.ico'))
+        icon_path = get_icon_path(__file__, 'fsf.ico')
+        app.setWindowIcon(QIcon(icon_path))
     except Exception as e:
         print(f"Error setting application icon: {e}")
 

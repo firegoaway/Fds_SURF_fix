@@ -83,7 +83,7 @@ def get_button_style_common():
         }
     """
 
-def get_button_style_fds5():
+def get_button_style_fds5(): 
     """Возвращает стиль для кнопок в FDS5."""
     return """
         QPushButton {
@@ -164,12 +164,10 @@ def create_input_field_common(app_instance, label_text, hint_text, tooltip_text,
     line_edit.setStyleSheet(get_input_style_common())
     # Removed fixed width, allow line edit to expand
     line_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-    
     # Apply input validation and math operations only to editable fields
     if not read_only:
         # Connect to textChanged signal for input validation
         line_edit.textChanged.connect(lambda text: validate_and_calculate(line_edit, text))
-    
     layout.addWidget(line_edit)
 
     # Removed addStretch to prevent empty space on the right
@@ -199,7 +197,7 @@ def load_from_ini_common(app_instance, k_entry, fpom_entry, psyd_entry, v_entry,
     """Загрузка значений из INI файла для common."""
     current_directory = os.path.dirname(__file__)
     parent_directory = os.path.abspath(os.path.join(current_directory, os.pardir))
-    inis_path = os.path.join(parent_directory, 'inis')
+    inis_path = os.path.join(parent_directory, 'inis') 
     ini_file = os.path.join(inis_path, 'IniApendix1.ini')
 
     if os.path.exists(ini_file):
@@ -235,14 +233,12 @@ def load_from_ini_fds5(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m
             QMessageBox.warning(app_instance, "Ошибка загрузки INI", f"Значения не найдены: {e}")
         except Exception as e:
             QMessageBox.critical(app_instance, "Ошибка", f"Произошла непредвиденная ошибка при загрузке INI: {e}")
-
 def calculate_common(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_entry, tmax_entry, psy_entry, hrr_entry, stt_entry, bigM_entry, process_button, status_bar, process_id, read_ini_file_hoc_func):
     """Выполнение вычислений для common."""
     current_directory = os.path.dirname(__file__)
     parent_directory = os.path.abspath(os.path.join(current_directory, os.pardir))
     inis_path = os.path.join(parent_directory, 'inis')
     ini_path_hoc = os.path.join(inis_path, f'HOC_{process_id}.ini') if process_id is not None else os.path.join(inis_path, 'HOC.ini')
-    
     try:
         k = safe_eval(k_entry[1].text())
         Fpom = safe_eval(fpom_entry[1].text())
@@ -253,7 +249,6 @@ def calculate_common(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_e
         tmax = sqrt((k * Fpom) / (pi * v**2))
         Psi = psi_ud * pi * v**2 * tmax**2
         Stt = pi * (v * tmax)**2
-        
         HEAT_OF_COMBUSTION = float(read_ini_file_hoc_func(ini_path_hoc))
         Hc = HEAT_OF_COMBUSTION / 1000
 
@@ -265,7 +260,6 @@ def calculate_common(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_e
         else:
             bigM = Psi * tmax
             HRRPUA = Hc * Psi * 0.93 * 1000
-        
         tmax_entry[1].setText(f"{tmax:.4f}")
         psy_entry[1].setText(f"{Psi:.4f}")
         hrr_entry[1].setText(f"{HRRPUA:.4f}")
@@ -282,12 +276,11 @@ def calculate_common(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_e
 
 def calculate_fds5(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_entry, tmax_entry, psy_entry, hrr_entry, stt_entry, bigM_entry, process_button, status_bar, process_id, read_ini_file_hoc_func):
     """Выполнение вычислений для FDS5."""
-    current_directory = os.path.dirname(__file__)
+    current_directory = os.path.dirname(__file__) 
     parent_directory = os.path.abspath(os.path.join(current_directory, os.pardir))
     inis_path = os.path.join(parent_directory, 'inis')
 
     ini_path_hoc = os.path.join(inis_path, f'HOC_{process_id}.ini') if process_id is not None else os.path.join(inis_path, 'HOC.ini')
-    
     try:
         k = safe_eval(k_entry.findChild(QLineEdit).text())
         Fpom = safe_eval(fpom_entry.findChild(QLineEdit).text())
@@ -298,7 +291,6 @@ def calculate_fds5(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_ent
         tmax = sqrt((k * Fpom) / (pi * v**2))
         Psi = psi_ud * pi * v**2 * tmax**2
         Stt = pi * (v * tmax)**2
-        
         HEAT_OF_COMBUSTION = float(read_ini_file_hoc_func(ini_path_hoc))
         Hc = HEAT_OF_COMBUSTION / 1000
 
@@ -383,8 +375,7 @@ def process_fds_file_common(app_instance, k_entry, fpom_entry, psyd_entry, v_ent
     HRRPUA = hrr_entry[1].text()
 
     save_to_ini_common(k, Fpom, v_val_str, psi_ud, m_val_str, tmax, Psi_str, Stt, bigM, HRRPUA)
-    
-    current_directory = os.path.dirname(__file__)
+    current_directory = os.path.dirname(__file__) 
     parent_directory = os.path.abspath(os.path.join(current_directory, os.pardir))
     inis_path = os.path.join(parent_directory, 'inis')
 
@@ -404,9 +395,7 @@ def process_fds_file_common(app_instance, k_entry, fpom_entry, psyd_entry, v_ent
             MLRPUA = m_val / -TAU_Q
         else:
             MLRPUA = float(Psi_str)
-        
         HRRPUA_val = Hc * MLRPUA * 0.93 * 1000
-        
         if not MLRPUA or not TAU_Q:
             raise ValueError("Поля не должны быть пустыми")
 
@@ -416,7 +405,6 @@ def process_fds_file_common(app_instance, k_entry, fpom_entry, psyd_entry, v_ent
         surf_id = None
         hrrpua_found = False
         remove_ctrl_ramp = False
-        
         with open(fds_path, 'r', encoding='utf-8') as file:
             lines = file.readlines()
             for line in lines:
@@ -427,7 +415,6 @@ def process_fds_file_common(app_instance, k_entry, fpom_entry, psyd_entry, v_ent
 
                     inside_surf_block = True
                     vent_seen = False
-                    
                     if 'HRRPUA' in line:
                         hrrpua_found = True
                         modified_lines.append(f"&SURF ID='{surf_id}', ")
@@ -472,10 +459,8 @@ def process_fds_file_common(app_instance, k_entry, fpom_entry, psyd_entry, v_ent
 
         output_dir = os.path.dirname(fds_path)
         os.makedirs(output_dir, exist_ok=True)
-        
         with open(fds_path, 'w', encoding='utf-8') as file:
             file.writelines(modified_lines)
-        
         QMessageBox.information(app_instance, "Успех", f"Модифицированный .fds файл сохранён:\n\n{fds_path}")
         QTimer.singleShot(1000, app_instance.close)
 
@@ -487,7 +472,7 @@ def process_fds_file_fds5(app_instance, k_entry, fpom_entry, psyd_entry, v_entry
     k = k_entry.findChild(QLineEdit).text()
     Fpom = fpom_entry.findChild(QLineEdit).text()
     v_val_str = v_entry.findChild(QLineEdit).text()
-    psi_ud = psyd_entry.findChild(QLineEdit).text()
+    psi_ud = psyd_entry.findChild(QLineEdit).text() 
     m_val_str = m_entry.findChild(QLineEdit).text()
     tmax = tmax_entry.findChild(QLineEdit).text()
     Psi_str = psy_entry.findChild(QLineEdit).text()
@@ -496,7 +481,6 @@ def process_fds_file_fds5(app_instance, k_entry, fpom_entry, psyd_entry, v_entry
     HRRPUA = hrr_entry.findChild(QLineEdit).text()
 
     save_to_ini_common(k, Fpom, v_val_str, psi_ud, m_val_str, tmax, Psi_str, Stt, bigM, HRRPUA)
-    
     current_directory = os.path.dirname(__file__)
     parent_directory = os.path.abspath(os.path.join(current_directory, os.pardir))
     inis_path = os.path.join(parent_directory, 'inis')
@@ -510,26 +494,21 @@ def process_fds_file_fds5(app_instance, k_entry, fpom_entry, psyd_entry, v_entry
         v_val = float(v_val_str)
         m_val = float(m_val_str)
         TAU_Q = -float(tmax)
-        
         fds_path = read_ini_file_path_func(ini_path)
 
         if m_val > 0:
             MLRPUA = m_val / -TAU_Q
         else:
             MLRPUA = float(Psi_str)
-        
         HRRPUA_val = Hc * MLRPUA * 0.93 * 1000
-        
         if not MLRPUA or not TAU_Q:
             raise ValueError("Поля не должны быть пустыми")
-        
         modified_lines = []
         inside_surf_block = False
         vent_seen = False
         surf_id = None
         hrrpua_found = False
         remove_ctrl_ramp = False
-        
         with open(fds_path, 'r', encoding='utf-8') as file:
             lines = file.readlines()
             for line in lines:
@@ -585,15 +564,12 @@ def process_fds_file_fds5(app_instance, k_entry, fpom_entry, psyd_entry, v_entry
 
         output_dir = os.path.dirname(fds_path)
         os.makedirs(output_dir, exist_ok=True)
-        
         with open(fds_path, 'w', encoding='utf-8') as file:
             file.writelines(modified_lines)
-        
         QMessageBox.information(app_instance, "Успех", f"Модифицированный .fds файл сохранён:\n\n{fds_path}")
         status_bar.showMessage("Файл успешно сохранен.")
         QTimer.singleShot(1000, app_instance.close)
-    
-    except Exception as e:
+    except Exception as e: 
         QMessageBox.critical(app_instance, "Ошибка", str(e))
         status_bar.showMessage(f"Ошибка при обработке файлов: {e}")
 
@@ -605,7 +581,6 @@ def validate_and_calculate(line_edit, text):
     # Remove invalid characters (letters, commas, spaces)
     # Allow digits, decimal point, and basic math operators
     valid_text = re.sub(r"[^\d+\-*/.]", "", text)
-    
     # Update the line edit with the validated text only if it has changed
     # This prevents cursor reset issues when the text is already valid
     if text != valid_text:
@@ -636,3 +611,22 @@ def safe_eval(expression: str) -> float:
         raise ZeroDivisionError("Division by zero in expression")
     except Exception as e:
         raise ValueError(f"Invalid expression: {e}")
+
+def get_icon_path(main_file_path, icon_filename):
+    """
+    Get the path to an icon file in the .gitpics directory.
+    
+    Args:
+        main_file_path (str): Path to the main Python file (__file__)
+        icon_filename (str): Name of the icon file
+    Returns:
+        str: Full path to the icon file
+    """
+    # Get the directory containing the main Python file (e.g., p_libs)
+    main_dir = os.path.dirname(os.path.abspath(main_file_path))
+    # Get the parent directory of p_libs (where .gitpics should be)
+    parent_of_main_dir = os.path.dirname(main_dir)
+    # Construct path to .gitpics directory
+    gitpics_dir = os.path.join(parent_of_main_dir, '.gitpics')
+    # Return path to icon file
+    return os.path.join(gitpics_dir, icon_filename)
