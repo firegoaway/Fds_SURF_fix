@@ -195,7 +195,7 @@ def create_input_field_fds5(app_instance, label_text, hint_text, tooltip_text, r
     layout.addWidget(line_edit)
     return container # Return the container widget containing the label and line edit
 
-def load_from_ini_common(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_entry, process_id):
+def load_from_ini_common(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_entry):
     """Загрузка значений из INI файла для common."""
     current_directory = os.path.dirname(__file__)
     parent_directory = os.path.abspath(os.path.join(current_directory, os.pardir))
@@ -213,14 +213,8 @@ def load_from_ini_common(app_instance, k_entry, fpom_entry, psyd_entry, v_entry,
             m_entry[1].setText("0.0")
         except KeyError as e:
             QMessageBox.warning(app_instance, "Ошибка загрузки INI", f"Значения не найдены в INI файле: {e}")
-        
-        # После загрузки основных данных, проверим состояние .fds и создадим/обновим checkSURFFIX.ini
-        # Это гарантирует, что при запуске GUI состояние будет синхронизировано перед активацией кнопки "Сохранить".
-        # process_id передается как аргумент
-        create_check_ini_file(process_id, "None")
-        # ---------------------
 
-def load_from_ini_fds5(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_entry, process_id):
+def load_from_ini_fds5(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_entry):
     """Загрузка значений из INI файла для FDS5."""
     current_directory = os.path.dirname(__file__)
     parent_directory = os.path.abspath(os.path.join(current_directory, os.pardir))
@@ -241,12 +235,6 @@ def load_from_ini_fds5(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m
             QMessageBox.warning(app_instance, "Ошибка загрузки INI", f"Значения не найдены: {e}")
         except Exception as e:
             QMessageBox.critical(app_instance, "Ошибка", f"Произошла непредвиденная ошибка при загрузке INI: {e}")
-        
-        # После загрузки основных данных, проверим состояние .fds и создадим/обновим checkSURFFIX.ini
-        # Это гарантирует, что при запуске GUI состояние будет синхронизировано перед активацией кнопки "Сохранить".
-        # process_id передается как аргумент
-        create_check_ini_file(process_id, "None")
-        # ---------------------
             
 def calculate_common(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_entry, tmax_entry, psy_entry, hrr_entry, stt_entry, bigM_entry, process_button, status_bar, process_id, read_ini_file_hoc_func):
     """Выполнение вычислений для common."""
