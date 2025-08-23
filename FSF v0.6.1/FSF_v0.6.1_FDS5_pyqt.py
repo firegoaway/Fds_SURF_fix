@@ -10,18 +10,18 @@ try:
                            get_group_box_style, get_label_style, create_input_field_common,
                            load_from_ini_common, calculate_common, save_to_ini_common,
                            read_ini_file_path, read_ini_file_hoc, process_fds_file_common,
-                           get_icon_path)
+                           get_icon_path, safe_convert_to_float)
 except ModuleNotFoundError:
     import os
     import sys
-    # Add the directory containing fsf_utils.py to the Python path
+    # Добавляем директорию, содержащую fsf_utils.py, в Python-путь
     current_dir = os.path.dirname(os.path.abspath(__file__))
     sys.path.insert(0, current_dir)
     from fsf_utils import (setup_app_palette, get_input_style_common, get_button_style_common,
                            get_group_box_style, get_label_style, create_input_field_common,
                            load_from_ini_common, calculate_common, save_to_ini_common,
                            read_ini_file_path, read_ini_file_hoc, process_fds_file_common,
-                           get_icon_path)
+                           get_icon_path, safe_convert_to_float)
 
 # Глобальная переменная для ProcessID
 ProcessID = None
@@ -38,10 +38,10 @@ class FDSProcessorAppQt(QMainWindow):
     def __init__(self, process_id=None):
         super().__init__()
         self.process_id = process_id
-        self.setWindowTitle(f"FSF v0.6.0 ID:{self.process_id if self.process_id is not None else 'N/A'}")
+        self.setWindowTitle(f"FSF v0.6.1 ID:{self.process_id if self.process_id is not None else 'N/A'}")
         self.setMinimumSize(450, 850)
 
-        # Set the application icon
+        # Устанавливаем иконку
         try:
             icon_path = get_icon_path(__file__, 'fsf.ico')
             self.setWindowIcon(QIcon(icon_path))
@@ -145,7 +145,7 @@ class FDSProcessorAppQt(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    # Set the application icon
+    # Устанавливаем иконку
     try:
         icon_path = get_icon_path(__file__, 'fsf.ico')
         app.setWindowIcon(QIcon(icon_path))

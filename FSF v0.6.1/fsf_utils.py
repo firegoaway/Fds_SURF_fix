@@ -1,6 +1,8 @@
 import os
 import re
 import configparser
+import json
+import logging
 from math import sqrt, pi
 
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QLabel,
@@ -193,7 +195,7 @@ def create_input_field_fds5(app_instance, label_text, hint_text, tooltip_text, r
     layout.addWidget(line_edit)
     return container # Return the container widget containing the label and line edit
 
-def load_from_ini_common(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_entry):
+def load_from_ini_common(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_entry, process_id):
     """Загрузка значений из INI файла для common."""
     current_directory = os.path.dirname(__file__)
     parent_directory = os.path.abspath(os.path.join(current_directory, os.pardir))
@@ -211,6 +213,12 @@ def load_from_ini_common(app_instance, k_entry, fpom_entry, psyd_entry, v_entry,
             m_entry[1].setText("0.0")
         except KeyError as e:
             QMessageBox.warning(app_instance, "Ошибка загрузки INI", f"Значения не найдены в INI файле: {e}")
+        
+        # После загрузки основных данных, проверим состояние .fds и создадим/обновим checkSURFFIX.ini
+        # Это гарантирует, что при запуске GUI состояние будет синхронизировано перед активацией кнопки "Сохранить".
+        # process_id передается как аргумент
+        create_check_ini_file(process_id, "None")
+        # ---------------------
 
 def load_from_ini_fds5(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_entry):
     """Загрузка значений из INI файла для FDS5."""
@@ -385,16 +393,16 @@ def process_fds_file_common(app_instance, k_entry, fpom_entry, psyd_entry, v_ent
     try:
         HEAT_OF_COMBUSTION = float(read_ini_file_hoc_func(ini_path_hoc))
         Hc = HEAT_OF_COMBUSTION / 1000
-        v_val = float(v_val_str)
-        m_val = float(m_val_str)
-        TAU_Q = -float(tmax)
+        v_val = safe_convert_to_float(v_val_str)
+        m_val = safe_convert_to_float(m_val_str)
+        TAU_Q = -safe_convert_to_float(tmax)
 
         fds_path = read_ini_file_path_func(ini_path)
 
         if m_val > 0:
             MLRPUA = m_val / -TAU_Q
         else:
-            MLRPUA = float(Psi_str)
+            MLRPUA = safe_convert_to_float(Psi_str)
         HRRPUA_val = Hc * MLRPUA * 0.93 * 1000
         if not MLRPUA or not TAU_Q:
             raise ValueError("Поля не должны быть пустыми")
@@ -462,10 +470,12 @@ def process_fds_file_common(app_instance, k_entry, fpom_entry, psyd_entry, v_ent
         with open(fds_path, 'w', encoding='utf-8') as file:
             file.writelines(modified_lines)
         QMessageBox.information(app_instance, "Успех", f"Модифицированный .fds файл сохранён:\n\n{fds_path}")
+        create_check_ini_file(process_id, "Done")
         QTimer.singleShot(1000, app_instance.close)
 
     except Exception as e:
         QMessageBox.critical(app_instance, "Ошибка", str(e))
+        create_check_ini_file(process_id, "None")
 
 def process_fds_file_fds5(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_entry, tmax_entry, psy_entry, hrr_entry, stt_entry, bigM_entry, process_button, process_id, read_ini_file_path_func, read_ini_file_hoc_func, status_bar):
     """Обработка FDS файла для FDS5."""
@@ -491,15 +501,15 @@ def process_fds_file_fds5(app_instance, k_entry, fpom_entry, psyd_entry, v_entry
     try:
         HEAT_OF_COMBUSTION = float(read_ini_file_hoc_func(ini_path_hoc))
         Hc = HEAT_OF_COMBUSTION / 1000
-        v_val = float(v_val_str)
-        m_val = float(m_val_str)
-        TAU_Q = -float(tmax)
+        v_val = safe_convert_to_float(v_val_str)
+        m_val = safe_convert_to_float(m_val_str)
+        TAU_Q = -safe_convert_to_float(tmax)
         fds_path = read_ini_file_path_func(ini_path)
 
         if m_val > 0:
             MLRPUA = m_val / -TAU_Q
         else:
-            MLRPUA = float(Psi_str)
+            MLRPUA = safe_convert_to_float(Psi_str)
         HRRPUA_val = Hc * MLRPUA * 0.93 * 1000
         if not MLRPUA or not TAU_Q:
             raise ValueError("Поля не должны быть пустыми")
@@ -568,19 +578,22 @@ def process_fds_file_fds5(app_instance, k_entry, fpom_entry, psyd_entry, v_entry
             file.writelines(modified_lines)
         QMessageBox.information(app_instance, "Успех", f"Модифицированный .fds файл сохранён:\n\n{fds_path}")
         status_bar.showMessage("Файл успешно сохранен.")
+        create_check_ini_file(process_id, "Done")
         QTimer.singleShot(1000, app_instance.close)
     except Exception as e: 
         QMessageBox.critical(app_instance, "Ошибка", str(e))
         status_bar.showMessage(f"Ошибка при обработке файлов: {e}")
+        create_check_ini_file(process_id, "None")
 
 def validate_and_calculate(line_edit, text):
     """
-    Validates input to allow only numbers, decimal points, and basic math operators (+, -, *, /).
-    Does not evaluate the expression immediately. Evaluation happens on 'Calculate' button click.
+    Проверяет ввод, разрешая цифры, десятичные точки, основные математические операторы (+, -, *, /), 
+    возведение в степень (^) и скобки ().
+    Не вычисляет выражение немедленно. Вычисление происходит при нажатии кнопки 'Рассчитать'.
     """
     # Remove invalid characters (letters, commas, spaces)
-    # Allow digits, decimal point, and basic math operators
-    valid_text = re.sub(r"[^\d+\-*/.]", "", text)
+    # Allow digits, decimal point, basic math operators, exponentiation, and parentheses
+    valid_text = re.sub(r"[^\d+\-*/.^()]", "", text)
     # Update the line edit with the validated text only if it has changed
     # This prevents cursor reset issues when the text is already valid
     if text != valid_text:
@@ -589,44 +602,271 @@ def validate_and_calculate(line_edit, text):
 
 def safe_eval(expression: str) -> float:
     """
-    Safely evaluates a mathematical expression string.
-    Returns the evaluated float result or raises ValueError/ZeroDivisionError.
+    Безопасно вычисляет строку математического выражения с поддержкой:
+    - Основных операторов: +, -, *, /
+    - Возведения в степень: ^ (правоассоциативное)
+    - Скобок: () для группировки
+    - Правильного порядка операций: Скобки, Степени, Умножение/Деление, Сложение/Вычитание
+    
+    Возвращает вычисленный результат с плавающей точкой или вызывает ValueError/ZeroDivisionError.
     """
     if not expression:
         return 0.0
+    
+    # Remove whitespace
+    expression = expression.replace(' ', '')
+    
+    if not expression:
+        return 0.0
+    
     try:
-        # Базовая проверка: убеждаемся, что выражение содержит только разрешенные символы.
-        # This is a second layer of protection, though validate_and_calculate should have done this
-        if not re.match(r"^[\d+\-*/.() ]+$", expression):
-            raise ValueError("Invalid characters in expression")
-        # Evaluate the expression
-        # Note: eval() can be dangerous with untrusted input.
-        # For a more secure approach, consider using a proper expression parser library.
-        result = eval(expression)
-        # Ensure the result is a number (int or float)
-        if not isinstance(result, (int, float)):
-            raise ValueError("Expression did not evaluate to a number")
+        # Tokenize the expression
+        tokens = _tokenize(expression)
+        # Parse and evaluate the expression
+        result, _ = _parse_expression(tokens, 0)
         return float(result)
     except ZeroDivisionError:
         raise ZeroDivisionError("Division by zero in expression")
     except Exception as e:
         raise ValueError(f"Invalid expression: {e}")
 
-def get_icon_path(main_file_path, icon_filename):
+def _tokenize(expression: str) -> list:
+    """Преобразует строку выражения в список токенов."""
+    tokens = []
+    i = 0
+    while i < len(expression):
+        char = expression[i]
+        if char.isdigit() or char == '.':
+            # Parse number (including decimals)
+            num_str = ''
+            while i < len(expression) and (expression[i].isdigit() or expression[i] == '.'):
+                num_str += expression[i]
+                i += 1
+            tokens.append(float(num_str))
+            continue
+        elif char in '+-*/^()':
+            # Handle negative numbers: if +/- is at start or after another operator/parenthesis
+            if char in '+-' and (i == 0 or expression[i-1] in '+-*/^('):
+                # Check if it's followed by a digit or decimal point
+                j = i + 1
+                while j < len(expression) and expression[j] == ' ':
+                    j += 1
+                if j < len(expression) and (expression[j].isdigit() or expression[j] == '.'):
+                    # This is a unary operator, treat it as part of the number
+                    num_str = char
+                    i += 1
+                    while i < len(expression) and (expression[i].isdigit() or expression[i] == '.'):
+                        num_str += expression[i]
+                        i += 1
+                    tokens.append(float(num_str))
+                    continue
+            tokens.append(char)
+        elif char == ' ':
+            # Skip whitespace
+            pass
+        else:
+            raise ValueError(f"Invalid character: {char}")
+        i += 1
+    return tokens
+
+def _parse_expression(tokens: list, pos: int = 0) -> tuple:
+    """Анализирует и вычисляет выражение с правильным порядком операций."""
+    if not tokens:
+        return 0.0, pos
+    return _parse_addition_subtraction(tokens, pos)
+
+def _parse_addition_subtraction(tokens: list, pos: int) -> tuple:
+    """Анализирует сложение и вычитание (низкий приоритет)."""
+    left, pos = _parse_multiplication_division(tokens, pos)
+    
+    while pos < len(tokens) and tokens[pos] in ['+', '-']:
+        op = tokens[pos]
+        pos += 1
+        right, pos = _parse_multiplication_division(tokens, pos)
+        if op == '+':
+            left += right
+        else:
+            left -= right
+    
+    return left, pos
+
+def _parse_multiplication_division(tokens: list, pos: int) -> tuple:
+    """Анализирует умножение и деление."""
+    left, pos = _parse_exponentiation(tokens, pos)
+    
+    while pos < len(tokens) and tokens[pos] in ['*', '/']:
+        op = tokens[pos]
+        pos += 1
+        right, pos = _parse_exponentiation(tokens, pos)
+        if op == '*':
+            left *= right
+        else:
+            if right == 0:
+                raise ZeroDivisionError("Division by zero")
+            left /= right
+    
+    return left, pos
+
+def _parse_exponentiation(tokens: list, pos: int) -> tuple:
+    """Анализирует возведение в степень (^) с правоассоциативностью."""
+    left, pos = _parse_unary(tokens, pos)
+    
+    if pos < len(tokens) and tokens[pos] == '^':
+        pos += 1
+        # Right-associative: parse the rest of the expression as the right operand
+        right, pos = _parse_exponentiation(tokens, pos)
+        left = left ** right
+    
+    return left, pos
+
+def _parse_unary(tokens: list, pos: int) -> tuple:
+    """Анализирует унарные операторы и скобки."""
+    if pos >= len(tokens):
+        raise ValueError("Unexpected end of expression")
+    
+    # Handle unary minus
+    if tokens[pos] == '-':
+        pos += 1
+        value, pos = _parse_unary(tokens, pos)
+        return -value, pos
+    # Handle unary plus
+    elif tokens[pos] == '+':
+        pos += 1
+        return _parse_unary(tokens, pos)
+    else:
+        return _parse_primary(tokens, pos)
+
+def _parse_primary(tokens: list, pos: int) -> tuple:
+    """Анализирует числа и скобки."""
+    if pos >= len(tokens):
+        raise ValueError("Unexpected end of expression")
+    
+    token = tokens[pos]
+    
+    # Handle numbers
+    if isinstance(token, (int, float)):
+        return float(token), pos + 1
+    # Handle parentheses
+    elif token == '(':
+        pos += 1
+        result, pos = _parse_expression(tokens, pos)
+        if pos >= len(tokens) or tokens[pos] != ')':
+            raise ValueError("Mismatched parentheses")
+        return result, pos + 1  # Skip the closing parenthesis
+    else:
+        raise ValueError(f"Unexpected token: {token}")
+
+def safe_convert_to_float(value: str) -> float:
     """
-    Get the path to an icon file in the .gitpics directory.
+    Безопасно конвертирует строковое значение в число с плавающей точкой.
+    Поддерживает как обычные числа, так и символьные выражения.
     
     Args:
-        main_file_path (str): Path to the main Python file (__file__)
-        icon_filename (str): Name of the icon file
+        value (str): Строковое значение для конвертации
+        
     Returns:
-        str: Full path to the icon file
+        float: Преобразованное значение
+        
+    Raises:
+        ValueError: Если значение не может быть преобразовано
     """
-    # Get the directory containing the main Python file (e.g., p_libs)
+    if not value or not isinstance(value, str):
+        return 0.0
+    
+    # Удаляем пробелы
+    value = value.strip()
+    
+    if not value:
+        return 0.0
+    
+    try:
+        # Пытаемся сначала преобразовать как обычное число
+        return float(value)
+    except ValueError:
+        try:
+            # Если не удалось, пытаемся вычислить как символьное выражение
+            return safe_eval(value)
+        except Exception as e:
+            # Если и это не удалось, выбрасываем исключение
+            raise ValueError(f"Could not convert '{value}' to float: {e}")
+
+def get_icon_path(main_file_path, icon_filename):
+    """
+    Получает путь к файлу иконки в каталоге .gitpics.
+    
+    Аргументы:
+        main_file_path (str): Путь к основному файлу Python (__file__)
+        icon_filename (str): Имя файла иконки
+    Возвращает:
+        str: Полный путь к файлу иконки
+    """
+    # Получаем каталог, содержащий основной файл Python (например, p_libs)
     main_dir = os.path.dirname(os.path.abspath(main_file_path))
-    # Get the parent directory of p_libs (where .gitpics should be)
+    # Получаем родительский каталог p_libs (где должен быть .gitpics)
     parent_of_main_dir = os.path.dirname(main_dir)
-    # Construct path to .gitpics directory
+    # Формируем путь к каталогу .gitpics
     gitpics_dir = os.path.join(parent_of_main_dir, '.gitpics')
-    # Return path to icon file
+    # Возвращаем путь к файлу иконки
     return os.path.join(gitpics_dir, icon_filename)
+
+def create_check_ini_file(process_id, state="None"):
+    """
+    Создание checkSURFFIX_{process_id}.ini файла с указанным состоянием.
+    Также добавляет CheckSURFFIX=state в конец .fds файла и проверяет состояние в .fds.
+    
+    Args:
+        process_id: ID процесса (может быть None)
+        state: Состояние ("Done" или "None")
+    """
+    try:
+        current_directory = os.path.dirname(__file__)
+        parent_directory = os.path.abspath(os.path.join(current_directory, os.pardir))
+        inis_path = os.path.join(parent_directory, 'inis')
+        os.makedirs(inis_path, exist_ok=True)
+        
+        # Получаем путь к .fds файлу
+        ini_filename_path = f'filePath_{process_id}.ini' if process_id is not None else 'filePath.ini'
+        ini_path_file = os.path.join(inis_path, ini_filename_path)
+        
+        if os.path.exists(ini_path_file):
+            # Читаем путь к .fds файлу из INI файла
+            config = configparser.ConfigParser()
+            with open(ini_path_file, 'r', encoding='utf-16') as f:
+                config.read_file(f)
+            fds_path = config['filePath']['filePath']
+            
+            if os.path.exists(fds_path):
+                # Читаем .fds файл для проверки существующего состояния CheckSURFFIX
+                with open(fds_path, 'r', encoding='utf-8') as fds_file:
+                    fds_content = fds_file.read()
+                
+                # Проверяем существующее состояние в .fds
+                if 'CheckSURFFIX=Done' in fds_content:
+                    state = "Done"
+                elif 'CheckSURFFIX=None' in fds_content:
+                    state = "None"
+                # Если CheckSURFFIX не найден, оставляем переданное состояние
+                
+                # Добавляем CheckSURFFIX=state в конец .fds файла
+                if 'CheckSURFFIX=' not in fds_content:
+                    # Если нет строки CheckSURFFIX, добавляем её
+                    with open(fds_path, 'a', encoding='utf-8') as fds_file:
+                        fds_file.write(f'\nCheckSURFFIX={state}\n')
+                else:
+                    # Если строка CheckSURFFIX уже существует, обновляем её
+                    updated_content = re.sub(r'CheckSURFFIX=(Done|None)', f'CheckSURFFIX={state}', fds_content)
+                    with open(fds_path, 'w', encoding='utf-8') as fds_file:
+                        fds_file.write(updated_content)
+        
+        # Создаем или обновляем .ini файл с точным форматом без пробелов вокруг =
+        ini_filename = f'CheckSURFFIX_{process_id}.ini' if process_id is not None else 'CheckSURFFIX.ini'
+        ini_path = os.path.join(inis_path, ini_filename)
+        
+        # Записываем INI файл вручную без пробелов вокруг =
+        with open(ini_path, 'w', encoding='utf-16') as configfile:
+            configfile.write('[CheckSURFFIX]\n')
+            configfile.write(f'CheckSURFFIX={state}\n')
+            
+    except Exception as e:
+        # Игнорируем ошибки создания файла, чтобы не прерывать основной поток выполнения
+        pass

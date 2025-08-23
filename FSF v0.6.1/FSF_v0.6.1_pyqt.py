@@ -3,7 +3,7 @@ try:
                            get_group_box_style, get_label_style, create_input_field_common,
                            load_from_ini_common, calculate_common, save_to_ini_common,
                            read_ini_file_path, read_ini_file_hoc, process_fds_file_common,
-                           get_icon_path) # Add get_icon_path here
+                           get_icon_path, safe_convert_to_float)
 except ModuleNotFoundError:
     import os
     import sys
@@ -14,7 +14,7 @@ except ModuleNotFoundError:
                            get_group_box_style, get_label_style, create_input_field_common,
                            load_from_ini_common, calculate_common, save_to_ini_common,
                            read_ini_file_path, read_ini_file_hoc, process_fds_file_common,
-                           get_icon_path) # Add get_icon_path here
+                           get_icon_path, safe_convert_to_float)
 
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QLabel,
                              QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton,
@@ -37,7 +37,7 @@ class FDSProcessorAppQt(QMainWindow):
     def __init__(self, process_id=None):
         super().__init__()
         self.process_id = process_id
-        self.setWindowTitle(f"FSF v0.6.0 ID:{self.process_id if self.process_id is not None else 'N/A'}")
+        self.setWindowTitle(f"FSF v0.6.1 ID:{self.process_id if self.process_id is not None else 'N/A'}")
         self.setMinimumSize(450, 850)
 
         # Устанавливаем иконку приложения
