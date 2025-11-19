@@ -38,7 +38,7 @@ class FDSProcessorAppQt(QMainWindow):
     def __init__(self, process_id=None):
         super().__init__()
         self.process_id = process_id
-        self.setWindowTitle(f"FSF v0.6.1 ID:{self.process_id if self.process_id is not None else 'N/A'}")
+        self.setWindowTitle(f"FSF v0.7.0 ID:{self.process_id if self.process_id is not None else 'N/A'}")
         self.setMinimumSize(450, 850)
 
         # Устанавливаем иконку

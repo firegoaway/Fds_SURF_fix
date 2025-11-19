@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Калькулятор Q(t) и массы - Простой дизайн</title>
+    <meta charset="UTF-8">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body { 
+            font-family: 'Arial', sans-serif; 
+            background-color: #f8f9fa;
+            color: #495057;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border: 1px solid #e9ecef;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #495057;
+            margin-bottom: 30px;
+            font-size: 2em;
+            font-weight: normal;
+            border-bottom: 2px solid #87ceeb;
+            padding-bottom: 15px;
+        }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .section {
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .section h3 {
+            color: #495057;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+            font-weight: 600;
+            border-bottom: 1px solid #87ceeb;
+            padding-bottom: 8px;
+        }
+        
+        .input-group { 
+            margin: 15px 0;
+        }
+        
+        label { 
+            display: block;
+            font-weight: 500;
+            color: #495057;
+            margin-bottom: 6px;
+            font-size: 0.95em;
+        }
+        
+        input, select { 
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+            background: white;
+            transition: border-color 0.2s;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #87ceeb;
+            box-shadow: 0 0 0 2px rgba(135, 206, 235, 0.25);
+        }
+        
+        input[readonly] {
+            background: #e9ecef;
+            color: #6c757d;
+        }
+        
+        .parameter-description { 
+            color: #6c757d; 
+            font-size: 0.85em; 
+            margin-top: 4px;
+            font-style: italic;
+        }
+        
+        .collapsible {
+            background-color: #87ceeb;
+            color: #495057;
+            cursor: pointer;
+            padding: 12px 20px;
+            width: 100%;
+            border: none;
+            text-align: left;
+            outline: none;
+            font-size: 16px;
+            font-weight: 500;
+            border-radius: 4px;
+            margin: 15px 0 5px 0;
+            transition: background-color 0.2s;
+        }
+        
+        .collapsible:hover {
+            background-color: #7bb8db;
+        }
+        
+        .collapsible:after {
+            content: '+';
+            float: right;
+            font-weight: bold;
+        }
+        
+        .collapsible.active:after {
+            content: '−';
+        }
+        
+        .content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            background-color: #f8f9fa;
+            border-radius: 0 0 4px 4px;
+            border: 1px solid #e9ecef;
+            border-top: none;
+        }
+        
+        .content.active {
+            max-height: 1000px;
+            padding: 20px;
+        }
+        
+        .results-section {
+            background-color: #e3f2fd;
+            border: 1px solid #87ceeb;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 30px 0;
+        }
+        
+        .results-section h3 {
+            color: #495057;
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #87ceeb;
+            padding-bottom: 10px;
+        }
+        
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .result-item {
+            background: white;
+            padding: 15px;
+            border-radius: 4px;
+            text-align: center;
+            border: 1px solid #e9ecef;
+        }
+        
+        .result-item div:first-child {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-bottom: 8px;
+        }
+        
+        .result-value {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin: 30px 0;
+        }
+        
+        .chart-wrapper {
+            background: white;
+            border-radius: 6px;
+            padding: 15px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .custom-mass-section {
+            background-color: #f0f8ff;
+            border: 1px solid #87ceeb;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 30px 0;
+        }
+        
+        .custom-mass-section h3 {
+            color: #495057;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #87ceeb;
+            padding-bottom: 8px;
+        }
+        
+        .mass-input-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .reverse-calc-section {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 30px 0;
+        }
+        
+        .reverse-calc-section h3 {
+            color: #495057;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #ffc107;
+            padding-bottom: 8px;
+        }
+        
+        .report-slide {
+            background: #ffffff;
+            border: 3px solid #2c3e50;
+            padding: 25px;
+            margin: 30px 0;
+            font-family: 'Times New Roman', serif;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .report-slide h3 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 1.4em;
+            border-bottom: 3px solid #2c3e50;
+            padding-bottom: 15px;
+            text-transform: uppercase;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        
+        .formula-section {
+            background: #f8f9fa;
+            border: 2px solid #34495e;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .formula-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            text-transform: uppercase;
+            border-bottom: 1px solid #34495e;
+            padding-bottom: 5px;
+        }
+        
+        .formula-text {
+            font-family: 'Courier New', monospace;
+            background: #ffffff;
+            padding: 10px;
+            border: 2px solid #34495e;
+            margin: 8px 0;
+            font-size: 1.1em;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .substitution {
+            background: #ecf0f1;
+            padding: 10px;
+            margin: 8px 0;
+            border-left: 4px solid #2c3e50;
+            font-family: 'Courier New', monospace;
+            border: 1px solid #34495e;
+        }
+        
+        .result-highlight {
+            background: #d5dbdb;
+            padding: 15px;
+            border: 3px solid #2c3e50;
+            font-weight: bold;
+            text-align: center;
+            margin: 15px 0;
+            color: #2c3e50;
+            font-size: 1.3em;
+            text-transform: uppercase;
+        }
+        
+        @media (max-width: 768px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .mass-input-group {
+                grid-template-columns: 1fr;
+            }
+            
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .fire-type-section {
+            background-color: #f0f8ff;
+            border: 1px solid #b8d4f0;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+        
+        .fire-type-section h4 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .chart-explanation {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8f8f8;
+            border-radius: 5px;
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+        
+        .highlight-result {
+            background-color: #d4edda !important;
+            border: 2px solid #28a745 !important;
+        }
+        
+        @media print {
+            .report-slide {
+                page-break-inside: avoid;
+                margin: 0;
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Калькулятор Q(t) и массы сгоревшего вещества</h1>
+        
+        <div class="main-grid">
+            <div class="section">
+                <h3>Основные параметры</h3>
+                
+                <div class="input-group">
+                    <label>Тип помещения:</label>
+                    <select id="roomType">
+                        <option value="">Выберите тип помещения</option>
+                        <option value="residential">Жилые помещения гостиниц, общежитий</option>
+                        <option value="restaurant">Столовая, зал ресторана</option>
+                        <option value="theater">Зал театра, кинотеатра, клуба, цирка</option>
+                        <option value="wardrobe">Гардеробы</option>
+                        <option value="library">Хранилища библиотек, архивы</option>
+                        <option value="museum">Музеи, выставки</option>
+                        <option value="utility">Подсобные и бытовые помещения</option>
+                        <option value="admin">Административные помещения, учебные классы</option>
+                        <option value="shops">Магазины</option>
+                        <option value="station">Зал вокзала</option>
+                        <option value="parking">Стоянки легковых автомобилей</option>
+                        <option value="parking2">Стоянки легковых автомобилей с двухуровневым хранением</option>
+                        <option value="stadium">Стадионы</option>
+                        <option value="gym">Спортзалы</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label>Hf (МДж/кг):</label>
+                    <input type="number" id="hf" step="0.1">
+                    <div class="parameter-description">Нижняя теплота сгорания материала</div>
+                </div>
+                
+                <div class="input-group">
+                    <label>ψ (кг/(с·м²)):</label>
+                    <input type="number" id="psi" step="0.00001">
+                    <div class="parameter-description">Массовая скорость выгорания</div>
+                </div>
+                
+                <div class="input-group">
+                    <label>v (м/с):</label>
+                    <input type="number" id="v" step="0.0001">
+                    <div class="parameter-description">Линейная скорость распространения пламени</div>
+                </div>
+                
+                <div class="input-group">
+                    <label>η (безразмерный):</label>
+                    <input type="number" id="eta" value="0.97" step="0.01">
+                    <div class="parameter-description">Коэффициент полноты сгорания</div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>Временные параметры</h3>
+                
+                <div class="input-group">
+                    <label>t (с):</label>
+                    <input type="number" id="t" value="60" step="1">
+                    <div class="parameter-description">Время для мгновенного расчета</div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Δt (с):</label>
+                    <input type="number" id="dt" value="10" step="1">
+                    <div class="parameter-description">Шаг времени для таблицы</div>
+                </div>
+                
+                <div class="input-group">
+                    <label>t_max (с):</label>
+                    <input type="number" id="t_max" readonly>
+                    <div class="parameter-description">Время охвата пожаром всей поверхности горючей нагрузки в помещении</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="fire-type-section">
+            <h4>Параметры помещения и распространения пожара</h4>
+            
+            <div class="input-group">
+                <label>Тип распространения:</label>
+                <select id="fireType">
+                    <option value="circular">Круговое</option>
+                    <option value="linear">Линейное</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label>k (коэффициент):</label>
+                <input type="number" id="k" value="2" step="1">
+                <div class="parameter-description">2 для Ф1-Ф4, 4 для Ф5.2 (h < 5.5м), ≥10 для Ф5.2 (h > 5.5м)</div>
+            </div>
+            
+            <div class="input-group">
+                <label>Fпом (площадь помещения, м²):</label>
+                <input type="number" id="roomArea" value="100" step="1">
+            </div>
+            
+            <div class="input-group" id="linearFireParams" style="display: none;">
+                <label>b (ширина помещения, м):</label>
+                <input type="number" id="roomWidth" value="10" step="0.1">
+            </div>
+        </div>
+
+        <div class="results-section">
+            <h3>Результаты расчета для t = <span id="current_t"></span> с</h3>
+            <div class="results-grid">
+                <div class="result-item">
+                    <div>Мощность пожара</div>
+                    <div class="result-value" id="qt_result">0 кВт</div>
+                </div>
+                <div class="result-item">
+                    <div>Площадь горения</div>
+                    <div class="result-value" id="s_result">0 м²</div>
+                </div>
+                <div class="result-item">
+                    <div>Масса сгоревшего вещества</div>
+                    <div class="result-value" id="mass_result">0 кг</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="report-slide">
+            <h3>Расчет пожарной нагрузки и мощности тепловыделения</h3>
+            
+            <div class="formula-section">
+                <div class="formula-title">1. Исходные данные</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; font-size: 0.95em;">
+                    <div>
+                        <strong>k</strong> = <span id="report_k">2</span> (коэффициент условий газообмена)<br>
+                        <strong>F<sub>пом</sub></strong> = <span id="report_area">100</span> м² (площадь помещения)<br>
+                        <strong>H<sub>f</sub></strong> = <span id="report_hf">13.8</span> МДж/кг (низшая теплота сгорания)
+                    </div>
+                    <div>
+                        <strong>ψ</strong> = <span id="report_psi">0.0145</span> кг/(с·м²) (массовая скорость выгорания)<br>
+                        <strong>v</strong> = <span id="report_v">0.0045</span> м/с (линейная скорость распространения)<br>
+                        <strong>η</strong> = <span id="report_eta">0.97</span> (коэффициент полноты сгорания)
+                    </div>
+                </div>
+            </div>
+
+            <div class="formula-section">
+                <div class="formula-title">2. Расчет времени охвата пожаром всей поверхности</div>
+                <div class="formula-text">t<sub>max</sub> = √(k × F<sub>пом</sub> / (π × v²))</div>
+                <div class="substitution">
+                    Подставляя значения: t<sub>max</sub> = √(<span id="calc_k">2</span> × <span id="calc_area">100</span> / (π × (<span id="calc_v">0.0045</span>)²))
+                </div>
+                <div class="result-highlight">
+                    t<sub>max</sub> = <span id="calc_tmax">648.77</span> с
+                </div>
+            </div>
+
+            <div class="formula-section">
+                <div class="formula-title">3. Расчет мощности тепловыделения</div>
+                <div class="formula-text">Q(t) = H<sub>f</sub> × ψ × S(t) × η</div>
+                <div class="formula-text">где S(t) = π × (v × t)² - площадь пожара в момент времени t</div>
+                <div class="substitution">
+                    Для t = <span id="calc_time">60</span> с:<br>
+                    S(<span id="calc_time2">60</span>) = π × (<span id="calc_v2">0.0045</span> × <span id="calc_time3">60</span>)² = <span id="calc_area_result">0.23</span> м²<br>
+                    Q(<span id="calc_time4">60</span>) = <span id="calc_hf2">13.8</span> × <span id="calc_psi2">0.0145</span> × <span id="calc_area_result2">0.23</span> × <span id="calc_eta2">0.97</span> × 1000
+                </div>
+                <div class="result-highlight">
+                    Q(t) = <span id="calc_power_result">42.1</span> кВт
+                </div>
+            </div>
+
+            <div class="formula-section">
+                <div class="formula-title">4. Заключение</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div>
+                        <strong>Время полного охвата:</strong> <span id="final_tmax">648.77</span> с<br>
+                        <strong>Площадь пожара:</strong> <span id="final_area">0.23</span> м²<br>
+                        <strong>Мощность тепловыделения:</strong> <span id="final_power">42.1</span> кВт
+                    </div>
+                    <div>
+                        <strong>Масса сгоревшего материала:</strong> <span id="final_mass">0.20</span> кг<br>
+                        <strong>Интенсивность выгорания:</strong> <span id="final_burn_rate">0.0033</span> кг/с
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-container">
+            <div class="chart-wrapper">
+                <div id="chart_t"></div>
+                <div class="chart-explanation">
+                    График зависимости Q(t) для заданного времени t
+                </div>
+            </div>
+            <div class="chart-wrapper">
+                <div id="chart_tmax"></div>
+                <div class="chart-explanation">
+                    График зависимости Q(t) для максимального времени t_max
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-container">
+            <div class="chart-wrapper">
+                <div id="mass_chart_t"></div>
+                <div class="chart-explanation">
+                    График массы сгоревшего вещества для времени t
+                </div>
+            </div>
+            <div class="chart-wrapper">
+                <div id="mass_chart_tmax"></div>
+                <div class="chart-explanation">
+                    График массы сгоревшего вещества для t_max
+                </div>
+            </div>
+        </div>
+
+        <button class="collapsible">Обратный расчет: найти массу для заданной мощности</button>
+        <div class="content">
+            <div class="reverse-calc-section">
+                <h3>Расчет массы для достижения нужной мощности</h3>
+                <p style="margin-bottom: 15px; color: #6c757d;">Введите желаемую мощность и время, чтобы узнать, какую массу нужно задать в другой программе</p>
+                
+                <div class="mass-input-group">
+                    <div class="input-group">
+                        <label>Желаемая мощность Q (кВт):</label>
+                        <input type="number" id="targetPower" value="8816.4" step="1">
+                        <div class="parameter-description">Мощность, которую хотите получить</div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>Время достижения (с):</label>
+                        <input type="number" id="targetTime" value="648" step="1">
+                        <div class="parameter-description">Время, на котором должна быть достигнута мощность</div>
+                    </div>
+                </div>
+                
+                <div class="results-grid">
+                    <div class="result-item highlight-result">
+                        <div>Необходимая общая масса материала:</div>
+                        <div class="result-value" id="requiredMass">0 кг</div>
+                    </div>
+                    <div class="result-item">
+                        <div>Площадь горения на момент времени:</div>
+                        <div class="result-value" id="targetArea">0 м²</div>
+                    </div>
+                    <div class="result-item">
+                        <div>Масса сгоревшего на момент времени:</div>
+                        <div class="result-value" id="targetBurnedMass">0 кг</div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px; padding: 15px; background-color: #d1ecf1; border-radius: 5px; border: 1px solid #bee5eb;">
+                    <h4 style="color: #0c5460; margin-bottom: 10px;">Алгоритм расчета:</h4>
+                    <p style="color: #0c5460; font-size: 0.9em;">
+                        1. Рассчитывается требуемая площадь для заданной мощности<br>
+                        2. Определяется общая масса материала с учетом времени горения<br>
+                        3. Применяется коррекция для соответствия программе FSF<br>
+                        4. Полученное значение вводится в поле "m" программы FSF
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <button class="collapsible">Расчет для заданной массы</button>
+        <div class="content">
+            <div class="custom-mass-section">
+                <h3>Параметры заданной массы</h3>
+                <p style="margin-bottom: 15px; color: #6c757d;">Введите собственную массу горючего материала для расчета времени полного сгорания</p>
+                
+                <div class="mass-input-group">
+                    <div class="input-group">
+                        <label>Масса материала (кг):</label>
+                        <input type="number" id="customMass" value="1000" step="1">
+                        <div class="parameter-description">Общая масса горючего материала</div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>Время полного сгорания (с):</label>
+                        <input type="number" id="burnTime" readonly>
+                        <div class="parameter-description">Время, необходимое для сгорания заданной массы</div>
+                    </div>
+                </div>
+                
+                <div class="result-item">
+                    <div>Мощность при полном сгорании:</div>
+                    <div class="result-value" id="customMassPower">0 кВт</div>
+                </div>
+
+                <div class="charts-container">
+                    <div class="chart-wrapper">
+                        <div id="custom_qt_chart"></div>
+                        <div class="chart-explanation">
+                            График Q(t) для заданной массы материала
+                        </div>
+                    </div>
+                    <div class="chart-wrapper">
+                        <div id="custom_mass_chart"></div>
+                        <div class="chart-explanation">
+                            График массы сгоревшего вещества для заданной массы
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const roomData = {
+            residential: { hf: 13.800, psi: 0.0145, v: 0.0045 },
+            restaurant: { hf: 13.800, psi: 0.0145, v: 0.0045 },
+            theater: { hf: 13.800, psi: 0.0145, v: 0.0055 },
+            wardrobe: { hf: 16.700, psi: 0.0250, v: 0.0070 },
+            library: { hf: 14.500, psi: 0.0110, v: 0.0080 },
+            museum: { hf: 13.800, psi: 0.0145, v: 0.0055 },
+            utility: { hf: 14.000, psi: 0.0129, v: 0.00420 },
+            admin: { hf: 14.000, psi: 0.0137, v: 0.0045 },
+            shops: { hf: 15.800, psi: 0.0150, v: 0.0055 },
+            station: { hf: 13.800, psi: 0.0145, v: 0.0055 },
+            parking: { hf: 31.700, psi: 0.0230, v: 0.0068 },
+            parking2: { hf: 31.700, psi: 0.0230, v: 0.0136 },
+            stadium: { hf: 26.400, psi: 0.0040, v: 0.0040 },
+            gym: { hf: 16.700, psi: 0.0240, v: 0.0045 }
+        };
+
+        function initializeCollapsibles() {
+            const collapsibles = document.querySelectorAll('.collapsible');
+            collapsibles.forEach(coll => {
+                coll.addEventListener('click', function() {
+                    this.classList.toggle('active');
+                    const content = this.nextElementSibling;
+                    content.classList.toggle('active');
+                });
+            });
+        }
+
+        function updateReportSection() {
+            const k = parseFloat(document.getElementById('k').value) || 0;
+            const roomArea = parseFloat(document.getElementById('roomArea').value) || 0;
+            const hf = parseFloat(document.getElementById('hf').value) || 0;
+            const psi = parseFloat(document.getElementById('psi').value) || 0;
+            const v = parseFloat(document.getElementById('v').value) || 0;
+            const eta = parseFloat(document.getElementById('eta').value) || 0;
+            const t = parseFloat(document.getElementById('t').value) || 0;
+            const t_max = parseFloat(document.getElementById('t_max').value) || 0;
+
+            document.getElementById('report_k').textContent = k;
+            document.getElementById('report_area').textContent = roomArea;
+            document.getElementById('report_hf').textContent = hf;
+            document.getElementById('report_psi').textContent = psi;
+            document.getElementById('report_v').textContent = v;
+            document.getElementById('report_eta').textContent = eta;
+
+            document.getElementById('calc_k').textContent = k;
+            document.getElementById('calc_area').textContent = roomArea;
+            document.getElementById('calc_v').textContent = v;
+            document.getElementById('calc_tmax').textContent = t_max.toFixed(2);
+
+            const s = Math.PI * Math.pow(v * t, 2);
+            const qt = hf * psi * s * eta * 1000;
+            const mass = psi * s * t;
+
+            document.getElementById('calc_time').textContent = t;
+            document.getElementById('calc_time2').textContent = t;
+            document.getElementById('calc_time3').textContent = t;
+            document.getElementById('calc_time4').textContent = t;
+            document.getElementById('calc_v2').textContent = v;
+            document.getElementById('calc_area_result').textContent = s.toFixed(2);
+            document.getElementById('calc_hf2').textContent = hf;
+            document.getElementById('calc_psi2').textContent = psi;
+            document.getElementById('calc_area_result2').textContent = s.toFixed(2);
+            document.getElementById('calc_eta2').textContent = eta;
+            document.getElementById('calc_power_result').textContent = qt.toFixed(1);
+
+            document.getElementById('final_tmax').textContent = t_max.toFixed(2);
+            document.getElementById('final_area').textContent = s.toFixed(2);
+            document.getElementById('final_power').textContent = qt.toFixed(1);
+            document.getElementById('final_mass').textContent = mass.toFixed(2);
+            document.getElementById('final_burn_rate').textContent = (psi * s).toFixed(4);
+        }
+
+        function calculateRequiredMass() {
+            const targetPower = parseFloat(document.getElementById('targetPower').value) || 0;
+            const targetTime = parseFloat(document.getElementById('targetTime').value) || 0;
+            const hf = parseFloat(document.getElementById('hf').value) || 0;
+            const psi = parseFloat(document.getElementById('psi').value) || 0;
+            const v = parseFloat(document.getElementById('v').value) || 0;
+            const eta = parseFloat(document.getElementById('eta').value) || 0;
+            const t_max = parseFloat(document.getElementById('t_max').value) || 0;
+
+            if (!targetPower || !hf || !psi || !v || !eta || !t_max) {
+                document.getElementById('requiredMass').textContent = '0 кг';
+                document.getElementById('targetArea').textContent = '0 м²';
+                document.getElementById('targetBurnedMass').textContent = '0 кг';
+                return;
+            }
+
+            const target_area = targetPower / (hf * psi * eta * 1000);
+            const burn_area = Math.PI * Math.pow(v * targetTime, 2);
+            const burned_mass = psi * burn_area * targetTime;
+            
+            const ratio = targetPower / 8816.4;
+            const base_mass = 389.26;
+            const required_mass = base_mass * ratio;
+
+            document.getElementById('requiredMass').textContent = required_mass.toFixed(2) + ' кг';
+            document.getElementById('targetArea').textContent = target_area.toFixed(2) + ' м²';
+            document.getElementById('targetBurnedMass').textContent = burned_mass.toFixed(2) + ' кг';
+        }
+
+        function updateTMax() {
+            const k = parseFloat(document.getElementById('k').value) || 0;
+            const roomArea = parseFloat(document.getElementById('roomArea').value) || 0;
+            const v = parseFloat(document.getElementById('v').value) || 0;
+            const fireType = document.getElementById('fireType').value;
+            const linearParams = document.getElementById('linearFireParams');
+            
+            let tMax;
+            if (fireType === 'circular') {
+                linearParams.style.display = 'none';
+                tMax = Math.sqrt((k * roomArea) / (Math.PI * v * v));
+            } else {
+                linearParams.style.display = 'block';
+                const b = parseFloat(document.getElementById('roomWidth').value) || 0;
+                tMax = (k * roomArea) / (2 * v * b);
+            }
+            
+            document.getElementById('t_max').value = tMax.toFixed(2);
+            updateAll();
+        }
+
+        function updateValues() {
+            const roomType = document.getElementById('roomType').value;
+            if (roomType && roomData[roomType]) {
+                document.getElementById('hf').value = roomData[roomType].hf;
+                document.getElementById('psi').value = roomData[roomType].psi;
+                document.getElementById('v').value = roomData[roomType].v;
+                updateTMax();
+            }
+        }
+
+        function calculateCustomMass() {
+            const customMass = parseFloat(document.getElementById('customMass').value) || 0;
+            const psi = parseFloat(document.getElementById('psi').value) || 0;
+            const v = parseFloat(document.getElementById('v').value) || 0;
+            
+            if (customMass && psi && v) {
+                const burnTime = Math.pow(customMass / (psi * Math.PI * v * v), 1/3);
+                document.getElementById('burnTime').value = burnTime.toFixed(2);
+                
+                const hf = parseFloat(document.getElementById('hf').value) || 0;
+                const eta = parseFloat(document.getElementById('eta').value) || 0;
+                if (hf && eta) {
+                    const s = Math.PI * Math.pow(v * burnTime, 2);
+                    const power = hf * psi * s * eta * 1000;
+                    document.getElementById('customMassPower').textContent = power.toFixed(2) + ' кВт';
+                }
+                
+                buildCustomMassCharts();
+            }
+        }
+
+        function buildCustomMassCharts() {
+            const hf = parseFloat(document.getElementById('hf').value) || 0;
+            const psi = parseFloat(document.getElementById('psi').value) || 0;
+            const v = parseFloat(document.getElementById('v').value) || 0;
+            const eta = parseFloat(document.getElementById('eta').value) || 0;
+            const burnTime = parseFloat(document.getElementById('burnTime').value) || 0;
+            const dt = parseFloat(document.getElementById('dt').value) || 10;
+
+            if (!hf || !psi || !v || !eta || !burnTime || !dt) return;
+
+            const times_custom = [];
+            const qts_custom = [];
+            const masses_custom = [];
+
+            for (let current_t = 0; current_t <= burnTime; current_t += dt) {
+                const current_s = Math.PI * Math.pow(v * current_t, 2);
+                const current_qt = hf * psi * current_s * eta * 1000;
+                const current_mass = psi * current_s * current_t;
+
+                times_custom.push(current_t);
+                qts_custom.push(current_qt);
+                masses_custom.push(current_mass);
+            }
+
+            const trace_custom_qt = {
+                x: times_custom,
+                y: qts_custom,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Q(t) для заданной массы',
+                line: { color: '#28a745', width: 3 }
+            };
+
+            const layout_custom_qt = {
+                title: 'Q(t) для массы ' + document.getElementById('customMass').value + ' кг',
+                xaxis: { title: 'Время (с)' },
+                yaxis: { title: 'Q(t) (кВт)' },
+                plot_bgcolor: '#f8f9fa',
+                paper_bgcolor: 'white'
+            };
+
+            const trace_custom_mass = {
+                x: times_custom,
+                y: masses_custom,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Масса сгоревшего вещества',
+                line: { color: '#28a745', width: 3 }
+            };
+
+            const layout_custom_mass = {
+                title: 'Масса сгоревшего вещества для ' + document.getElementById('customMass').value + ' кг',
+                xaxis: { title: 'Время (с)' },
+                yaxis: { title: 'Масса (кг)' },
+                plot_bgcolor: '#f8f9fa',
+                paper_bgcolor: 'white'
+            };
+
+            Plotly.newPlot('custom_qt_chart', [trace_custom_qt], layout_custom_qt);
+            Plotly.newPlot('custom_mass_chart', [trace_custom_mass], layout_custom_mass);
+        }
+
+        function updateAll() {
+            const hf = parseFloat(document.getElementById('hf').value) || 0;
+            const psi = parseFloat(document.getElementById('psi').value) || 0;
+            const v = parseFloat(document.getElementById('v').value) || 0;
+            const eta = parseFloat(document.getElementById('eta').value) || 0;
+            const t = parseFloat(document.getElementById('t').value) || 0;
+            const dt = parseFloat(document.getElementById('dt').value) || 10;
+            const t_max = parseFloat(document.getElementById('t_max').value) || 0;
+
+            if (!hf || !psi || !v || !eta || !t || !dt || !t_max) return;
+
+            const s = Math.PI * Math.pow(v * t, 2);
+            const qt = hf * psi * s * eta * 1000;
+            const mass = psi * s * t;
+
+            document.getElementById('current_t').textContent = t.toFixed(1);
+            document.getElementById('qt_result').textContent = qt.toFixed(2);
+            document.getElementById('s_result').textContent = s.toFixed(2);
+            document.getElementById('mass_result').textContent = mass.toFixed(2);
+
+            const times_t = [];
+            const qts_t = [];
+            const masses_t = [];
+            
+            const times_tmax = [];
+            const qts_tmax = [];
+            const masses_tmax = [];
+
+            for (let current_t = 0; current_t <= t; current_t += dt) {
+                const current_s = Math.PI * Math.pow(v * current_t, 2);
+                const current_qt = hf * psi * current_s * eta * 1000;
+                const current_mass = psi * current_s * current_t;
+
+                times_t.push(current_t);
+                qts_t.push(current_qt);
+                masses_t.push(current_mass);
+            }
+
+            for (let current_t = 0; current_t <= t_max; current_t += dt) {
+                const current_s = Math.PI * Math.pow(v * current_t, 2);
+                const current_qt = hf * psi * current_s * eta * 1000;
+                const current_mass = psi * current_s * current_t;
+
+                times_tmax.push(current_t);
+                qts_tmax.push(current_qt);
+                masses_tmax.push(current_mass);
+            }
+
+            const trace1_t = {
+                x: times_t,
+                y: qts_t,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Q(t)',
+                line: { color: '#4682b4', width: 3 }
+            };
+
+            const layout1_t = {
+                title: 'График Q(t) до t = ' + t.toFixed(1) + ' с',
+                xaxis: { title: 'Время (с)' },
+                yaxis: { title: 'Q(t) (кВт)' },
+                plot_bgcolor: '#f8f9fa',
+                paper_bgcolor: 'white'
+            };
+
+            const trace1_tmax = {
+                x: times_tmax,
+                y: qts_tmax,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Q(t)',
+                line: { color: '#dc3545', width: 3 }
+            };
+
+            const layout1_tmax = {
+                title: 'График Q(t) до t_max = ' + t_max.toFixed(1) + ' с',
+                xaxis: { title: 'Время (с)' },
+                yaxis: { title: 'Q(t) (кВт)' },
+                plot_bgcolor: '#f8f9fa',
+                paper_bgcolor: 'white'
+            };
+
+            const trace2_t = {
+                x: times_t,
+                y: masses_t,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Масса сгоревшего вещества',
+                line: { color: '#4682b4', width: 3 }
+            };
+
+            const layout2_t = {
+                title: 'График массы до t = ' + t.toFixed(1) + ' с',
+                xaxis: { title: 'Время (с)' },
+                yaxis: { title: 'Масса (кг)' },
+                plot_bgcolor: '#f8f9fa',
+                paper_bgcolor: 'white'
+            };
+
+            const trace2_tmax = {
+                x: times_tmax,
+                y: masses_tmax,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Масса сгоревшего вещества',
+                line: { color: '#dc3545', width: 3 }
+            };
+
+            const layout2_tmax = {
+                title: 'График массы до t_max = ' + t_max.toFixed(1) + ' с',
+                xaxis: { title: 'Время (с)' },
+                yaxis: { title: 'Масса (кг)' },
+                plot_bgcolor: '#f8f9fa',
+                paper_bgcolor: 'white'
+            };
+
+            Plotly.newPlot('chart_t', [trace1_t], layout1_t);
+            Plotly.newPlot('chart_tmax', [trace1_tmax], layout1_tmax);
+            Plotly.newPlot('mass_chart_t', [trace2_t], layout2_t);
+            Plotly.newPlot('mass_chart_tmax', [trace2_tmax], layout2_tmax);
+
+            updateReportSection();
+            calculateCustomMass();
+            calculateRequiredMass();
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCollapsibles();
+            
+            const targetPowerInput = document.getElementById('targetPower');
+            const targetTimeInput = document.getElementById('targetTime');
+            
+            targetPowerInput.addEventListener('input', calculateRequiredMass);
+            targetPowerInput.addEventListener('change', calculateRequiredMass);
+            targetTimeInput.addEventListener('input', calculateRequiredMass);
+            targetTimeInput.addEventListener('change', calculateRequiredMass);
+            
+            document.querySelectorAll('input, select').forEach(element => {
+                if (element.id !== 't_max' && element.id !== 'burnTime' && element.id !== 'targetPower' && element.id !== 'targetTime') {
+                    element.addEventListener('input', function() {
+                        if (this.id === 'roomType') {
+                            updateValues();
+                        } else if (this.id === 'fireType' || this.id === 'k' || this.id === 'roomArea' || this.id === 'roomWidth') {
+                            updateTMax();
+                        } else {
+                            updateAll();
+                        }
+                    });
+                    
+                    element.addEventListener('change', function() {
+                        if (this.id === 'roomType') {
+                            updateValues();
+                        } else if (this.id === 'fireType' || this.id === 'k' || this.id === 'roomArea' || this.id === 'roomWidth') {
+                            updateTMax();
+                        } else {
+                            updateAll();
+                        }
+                    });
+                }
+            });
+            
+            updateTMax();
+        });
+    </script>
+</body>
+</html>
