@@ -37,7 +37,7 @@ class FDSProcessorAppQt(QMainWindow):
     def __init__(self, process_id=None):
         super().__init__()
         self.process_id = process_id
-        self.setWindowTitle(f"FSF v0.7.0 ID:{self.process_id if self.process_id is not None else 'N/A'}")
+        self.setWindowTitle(f"FSF v0.7.1 ID:{self.process_id if self.process_id is not None else 'N/A'}")
         self.setMinimumSize(450, 850)
 
         # Устанавливаем иконку приложения
@@ -81,7 +81,7 @@ class FDSProcessorAppQt(QMainWindow):
         # Input Fields
         self.k_entry = self._create_input_field("k", "Коэффициент k", "Коэффициент, учитывающий отличие фактической площади горючей нагрузки в помещении и площади помещения.\n\nДля помещений классов функциональной пожарной опасности Ф1 - Ф4 следует принимать равным 2", prefix="* ")
         self.fpom_entry = self._create_input_field("Fпом", "Площадь помещения с очагом пожара, м²", "Площадь помещения с очагом пожара, м²", prefix="* ")
-        self.v_entry = self._create_input_field("v", "Линейная скорость распространения пламени, м/с", "Линейная скорость распространения пламени, м/s", prefix="* ")
+        self.v_entry = self._create_input_field("v", "Линейная скорость распространения пламени, м/с", "Линейная скорость распространения пламени, м/с", prefix="* ")
         self.psyd_entry = self._create_input_field("ψуд", "Удельная массовая скорость выгорания, кг/(с·м²)", "Удельная массовая скорость выгорания (для жидкостей установившаяся), кг/(с·м²)", prefix="* ")
         self.m_entry = self._create_input_field("m", "Полная масса сгораемой нагрузки, кг", "Полная масса сгораемой нагрузки (кг)\n\n0 - значение по умолчанию\n\nПри разработке компенсирующих мероприятий,\nнаправленных на сокращение горючей нагрузки в очаговой зоне,\nукажите это значение.\nОно должно быть меньше M при m = 0", prefix="* ")
 

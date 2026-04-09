@@ -12,6 +12,7 @@
 Особенность этих формул состоит в том, что мощность и результаты развития пожара на выходе **инвариантны** к размерам очага пожара в пожарной модели **FDS**.
 
 ### Поддерживаемые версии FDS
+> [**FDS 6.10.1**](https://github.com/firemodels/fds/releases/tag/FDS-6.10.1)
 > [**FDS 6.9.1**](https://github.com/firemodels/fds/releases/tag/FDS-6.9.1)
 > [**FDS 6.9.0**](https://github.com/firemodels/fds/releases/tag/FDS-6.9.0)
 > [**FDS 6.8.0**](https://github.com/firemodels/fds/releases/tag/FDS-6.8.0)
