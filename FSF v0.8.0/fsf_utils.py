@@ -68,9 +68,9 @@ def get_button_style_common():
             color: #0369a1;
             border: none;
             border-radius: 5px;
-            padding: 10px 15px;
+            padding: 6px 15px;
             font-weight: bold;
-            min-width: 120px;
+            min-width: 110px;
         }
         QPushButton:hover {
             background-color: #7dd3fc;
@@ -85,7 +85,7 @@ def get_button_style_common():
         }
     """
 
-def get_button_style_fds5(): 
+def get_button_style_fds5():
     """Возвращает стиль для кнопок в FDS5."""
     return """
         QPushButton {
@@ -93,8 +93,9 @@ def get_button_style_fds5():
             color: #0369a1;
             border: none;
             border-radius: 8px;
-            padding: 20px 25px;
+            padding: 6px 25px;
             font-size: 15px;
+            font-weight: bold;
         }
         QPushButton:hover {
             background-color: #7dd3fc;
@@ -195,11 +196,11 @@ def create_input_field_fds5(app_instance, label_text, hint_text, tooltip_text, r
     layout.addWidget(line_edit)
     return container # Return the container widget containing the label and line edit
 
-def load_from_ini_common(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_entry):
+def load_from_ini_common(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_entry, t_entry):
     """Загрузка значений из INI файла для common."""
     current_directory = os.path.dirname(__file__)
     parent_directory = os.path.abspath(os.path.join(current_directory, os.pardir))
-    inis_path = os.path.join(parent_directory, 'inis') 
+    inis_path = os.path.join(parent_directory, 'inis')
     ini_file = os.path.join(inis_path, 'IniApendix1.ini')
 
     if os.path.exists(ini_file):
@@ -211,10 +212,11 @@ def load_from_ini_common(app_instance, k_entry, fpom_entry, psyd_entry, v_entry,
             v_entry[1].setText(config['Calculations']['v'])
             psyd_entry[1].setText(config['Calculations']['psi_ud'])
             m_entry[1].setText("0.0")
+            t_entry[1].setText("0.0")
         except KeyError as e:
             QMessageBox.warning(app_instance, "Ошибка загрузки INI", f"Значения не найдены в INI файле: {e}")
 
-def load_from_ini_fds5(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_entry):
+def load_from_ini_fds5(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_entry, t_entry):
     """Загрузка значений из INI файла для FDS5."""
     current_directory = os.path.dirname(__file__)
     parent_directory = os.path.abspath(os.path.join(current_directory, os.pardir))
@@ -231,12 +233,13 @@ def load_from_ini_fds5(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m
             v_entry.findChild(QLineEdit).setText(config['Calculations']['v'])
             psyd_entry.findChild(QLineEdit).setText(config['Calculations']['psi_ud'])
             m_entry.findChild(QLineEdit).setText("0.0")  # Default value
+            t_entry.findChild(QLineEdit).setText("0.0")  # Default value
         except KeyError as e:
             QMessageBox.warning(app_instance, "Ошибка загрузки INI", f"Значения не найдены: {e}")
         except Exception as e:
             QMessageBox.critical(app_instance, "Ошибка", f"Произошла непредвиденная ошибка при загрузке INI: {e}")
             
-def calculate_common(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_entry, tmax_entry, psy_entry, hrr_entry, stt_entry, bigM_entry, process_button, status_bar, process_id, read_ini_file_hoc_func):
+def calculate_common(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_entry, t_entry, tmax_entry, psy_entry, hrr_entry, stt_entry, bigM_entry, process_button, status_bar, process_id, read_ini_file_hoc_func):
     """Выполнение вычислений для common."""
     current_directory = os.path.dirname(__file__)
     parent_directory = os.path.abspath(os.path.join(current_directory, os.pardir))
@@ -248,21 +251,26 @@ def calculate_common(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_e
         v = safe_eval(v_entry[1].text())
         psi_ud = safe_eval(psyd_entry[1].text())
         m = safe_eval(m_entry[1].text())
+        t = safe_eval(t_entry[1].text())
 
         tmax = sqrt((k * Fpom) / (pi * v**2))
+        # Если t задано и не равно 0, используем его как tmax
+        if t != 0:
+            tmax = t
         Psi = psi_ud * pi * v**2 * tmax**2
         Stt = pi * (v * tmax)**2
         HEAT_OF_COMBUSTION = float(read_ini_file_hoc_func(ini_path_hoc))
         Hc = HEAT_OF_COMBUSTION / 1000
+        eta = 0.93
 
         if m > 0:
             bigM = Psi * tmax
             Psi = m / tmax
             bigM = m
-            HRRPUA = Hc * Psi * 0.93 * 1000
+            HRRPUA = Hc * Psi * eta * 1000
         else:
             bigM = Psi * tmax
-            HRRPUA = Hc * Psi * 0.93 * 1000
+            HRRPUA = Hc * Psi * eta * 1000
         tmax_entry[1].setText(f"{tmax:.4f}")
         psy_entry[1].setText(f"{Psi:.4f}")
         hrr_entry[1].setText(f"{HRRPUA:.4f}")
@@ -271,15 +279,18 @@ def calculate_common(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_e
 
         stt_entry[1].setToolTip(f"Площадь поверхности горючей нагрузки в помещении, охватываемая пожаром за время tmax = {tmax:.4f} м²")
         process_button.setEnabled(True)
+        status_bar.showMessage("Вычисления выполнены успешно.")
 
     except ValueError as ve:
         QMessageBox.warning(app_instance, "Ошибка ввода", f"Ошибка ввода: {ve}")
+        status_bar.showMessage("Ошибка ввода: Проверьте введенные значения.")
     except Exception as ex:
         QMessageBox.critical(app_instance, "Ошибка", f"Произошла ошибка: {ex}")
+        status_bar.showMessage("Произошла критическая ошибка.")
 
-def calculate_fds5(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_entry, tmax_entry, psy_entry, hrr_entry, stt_entry, bigM_entry, process_button, status_bar, process_id, read_ini_file_hoc_func):
+def calculate_fds5(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_entry, t_entry, tmax_entry, psy_entry, hrr_entry, stt_entry, bigM_entry, process_button, status_bar, process_id, read_ini_file_hoc_func):
     """Выполнение вычислений для FDS5."""
-    current_directory = os.path.dirname(__file__) 
+    current_directory = os.path.dirname(__file__)
     parent_directory = os.path.abspath(os.path.join(current_directory, os.pardir))
     inis_path = os.path.join(parent_directory, 'inis')
 
@@ -290,22 +301,27 @@ def calculate_fds5(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_ent
         v = safe_eval(v_entry.findChild(QLineEdit).text())
         psi_ud = safe_eval(psyd_entry.findChild(QLineEdit).text())
         m = safe_eval(m_entry.findChild(QLineEdit).text())
+        t = safe_eval(t_entry.findChild(QLineEdit).text())
 
         tmax = sqrt((k * Fpom) / (pi * v**2))
+        # Если t задано и не равно 0, используем его как tmax
+        if t != 0:
+            tmax = t
         Psi = psi_ud * pi * v**2 * tmax**2
         Stt = pi * (v * tmax)**2
         HEAT_OF_COMBUSTION = float(read_ini_file_hoc_func(ini_path_hoc))
         Hc = HEAT_OF_COMBUSTION / 1000
+        eta = 0.93
 
         if m > 0:
             bigM = Psi * tmax
             Psi = m / tmax
             bigM = m
-            HRRPUA = Hc * Psi * 0.93 * 1000
+            HRRPUA = Hc * Psi * eta * 1000
         else:
             bigM = Psi * tmax
             Psi = 0.45 * (1 / k) * (bigM / tmax)
-            HRRPUA = Hc * Psi * 0.93 * 1000
+            HRRPUA = Hc * Psi * eta * 1000
 
         tmax_entry.findChild(QLineEdit).setText(f"{tmax:.4f}")
         psy_entry.findChild(QLineEdit).setText(f"{Psi:.4f}")
@@ -325,7 +341,7 @@ def calculate_fds5(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_ent
         QMessageBox.critical(app_instance, "Ошибка", f"Произошла ошибка: {ex}")
         status_bar.showMessage("Произошла критическая ошибка.")
 
-def save_to_ini_common(k, Fpom, v, psi_ud, m, tmax, Psi, Stt, bigM, HRRPUA):
+def save_to_ini_common(k, Fpom, v, psi_ud, m, t, tmax, Psi, Stt, bigM, HRRPUA):
     """Сохранение значений в INI файл для common."""
     config = configparser.ConfigParser()
     config['Calculations'] = {
@@ -334,6 +350,7 @@ def save_to_ini_common(k, Fpom, v, psi_ud, m, tmax, Psi, Stt, bigM, HRRPUA):
         'v': v,
         'psi_ud': psi_ud,
         'm': m,
+        't': t,
         'tmax': tmax,
         'Psi': Psi,
         'Stt': Stt,
@@ -364,21 +381,22 @@ def read_ini_file_hoc(ini_file):
         config.read_file(f)
     return config['HEAT_OF_COMBUSTION']['HEAT_OF_COMBUSTION']
 
-def process_fds_file_common(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_entry, tmax_entry, psy_entry, hrr_entry, stt_entry, bigM_entry, process_button, process_id, read_ini_file_path_func, read_ini_file_hoc_func):
+def process_fds_file_common(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_entry, t_entry, tmax_entry, psy_entry, hrr_entry, stt_entry, bigM_entry, process_button, process_id, read_ini_file_path_func, read_ini_file_hoc_func, status_bar):
     """Обработка FDS файла для common."""
     k = k_entry[1].text()
     Fpom = fpom_entry[1].text()
     v_val_str = v_entry[1].text()
     psi_ud = psyd_entry[1].text()
     m_val_str = m_entry[1].text()
+    t_val_str = t_entry[1].text()
     tmax = tmax_entry[1].text()
     Psi_str = psy_entry[1].text()
     Stt = stt_entry[1].text()
     bigM = bigM_entry[1].text()
     HRRPUA = hrr_entry[1].text()
 
-    save_to_ini_common(k, Fpom, v_val_str, psi_ud, m_val_str, tmax, Psi_str, Stt, bigM, HRRPUA)
-    current_directory = os.path.dirname(__file__) 
+    save_to_ini_common(k, Fpom, v_val_str, psi_ud, m_val_str, t_val_str, tmax, Psi_str, Stt, bigM, HRRPUA)
+    current_directory = os.path.dirname(__file__)
     parent_directory = os.path.abspath(os.path.join(current_directory, os.pardir))
     inis_path = os.path.join(parent_directory, 'inis')
 
@@ -390,7 +408,10 @@ def process_fds_file_common(app_instance, k_entry, fpom_entry, psyd_entry, v_ent
         Hc = HEAT_OF_COMBUSTION / 1000
         v_val = safe_convert_to_float(v_val_str)
         m_val = safe_convert_to_float(m_val_str)
-        TAU_Q = -safe_convert_to_float(tmax)
+        t_val = safe_convert_to_float(t_val_str)
+        # Если t задано и не равно 0, используем его как TAU_Q, иначе рассчитанный tmax
+        TAU_Q = -t_val if t_val != 0 else -safe_convert_to_float(tmax)
+        eta = 0.93
 
         fds_path = read_ini_file_path_func(ini_path)
 
@@ -398,7 +419,7 @@ def process_fds_file_common(app_instance, k_entry, fpom_entry, psyd_entry, v_ent
             MLRPUA = m_val / -TAU_Q
         else:
             MLRPUA = safe_convert_to_float(Psi_str)
-        HRRPUA_val = Hc * MLRPUA * 0.93 * 1000
+        HRRPUA_val = Hc * MLRPUA * eta * 1000
         if not MLRPUA or not TAU_Q:
             raise ValueError("Поля не должны быть пустыми")
 
@@ -465,27 +486,30 @@ def process_fds_file_common(app_instance, k_entry, fpom_entry, psyd_entry, v_ent
         with open(fds_path, 'w', encoding='utf-8') as file:
             file.writelines(modified_lines)
         QMessageBox.information(app_instance, "Успех", f"Модифицированный .fds файл сохранён:\n\n{fds_path}")
+        status_bar.showMessage("Файл успешно сохранен.")
         create_check_ini_file(process_id, "Done")
         QTimer.singleShot(1000, app_instance.close)
 
     except Exception as e:
         QMessageBox.critical(app_instance, "Ошибка", str(e))
+        status_bar.showMessage(f"Ошибка при обработке файлов: {e}")
         create_check_ini_file(process_id, "None")
 
-def process_fds_file_fds5(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_entry, tmax_entry, psy_entry, hrr_entry, stt_entry, bigM_entry, process_button, process_id, read_ini_file_path_func, read_ini_file_hoc_func, status_bar):
+def process_fds_file_fds5(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_entry, t_entry, tmax_entry, psy_entry, hrr_entry, stt_entry, bigM_entry, process_button, process_id, read_ini_file_path_func, read_ini_file_hoc_func, status_bar):
     """Обработка FDS файла для FDS5."""
     k = k_entry.findChild(QLineEdit).text()
     Fpom = fpom_entry.findChild(QLineEdit).text()
     v_val_str = v_entry.findChild(QLineEdit).text()
-    psi_ud = psyd_entry.findChild(QLineEdit).text() 
+    psi_ud = psyd_entry.findChild(QLineEdit).text()
     m_val_str = m_entry.findChild(QLineEdit).text()
+    t_val_str = t_entry.findChild(QLineEdit).text()
     tmax = tmax_entry.findChild(QLineEdit).text()
     Psi_str = psy_entry.findChild(QLineEdit).text()
     Stt = stt_entry.findChild(QLineEdit).text()
     bigM = bigM_entry.findChild(QLineEdit).text()
     HRRPUA = hrr_entry.findChild(QLineEdit).text()
 
-    save_to_ini_common(k, Fpom, v_val_str, psi_ud, m_val_str, tmax, Psi_str, Stt, bigM, HRRPUA)
+    save_to_ini_common(k, Fpom, v_val_str, psi_ud, m_val_str, t_val_str, tmax, Psi_str, Stt, bigM, HRRPUA)
     current_directory = os.path.dirname(__file__)
     parent_directory = os.path.abspath(os.path.join(current_directory, os.pardir))
     inis_path = os.path.join(parent_directory, 'inis')
@@ -498,14 +522,18 @@ def process_fds_file_fds5(app_instance, k_entry, fpom_entry, psyd_entry, v_entry
         Hc = HEAT_OF_COMBUSTION / 1000
         v_val = safe_convert_to_float(v_val_str)
         m_val = safe_convert_to_float(m_val_str)
-        TAU_Q = -safe_convert_to_float(tmax)
+        t_val = safe_convert_to_float(t_val_str)
+        # Если t задано и не равно 0, используем его как TAU_Q, иначе рассчитанный tmax
+        TAU_Q = -t_val if t_val != 0 else -safe_convert_to_float(tmax)
+        eta = 0.93
+
         fds_path = read_ini_file_path_func(ini_path)
 
         if m_val > 0:
             MLRPUA = m_val / -TAU_Q
         else:
             MLRPUA = safe_convert_to_float(Psi_str)
-        HRRPUA_val = Hc * MLRPUA * 0.93 * 1000
+        HRRPUA_val = Hc * MLRPUA * eta * 1000
         if not MLRPUA or not TAU_Q:
             raise ValueError("Поля не должны быть пустыми")
         modified_lines = []
@@ -865,3 +893,271 @@ def create_check_ini_file(process_id, state="None"):
     except Exception as e:
         # Игнорируем ошибки создания файла, чтобы не прерывать основной поток выполнения
         pass
+
+def generate_report_md(app_instance, k, Fpom, v, psi_ud, m, t, tmax, Psi, Stt, bigM, HRRPUA, process_id):
+    """
+    Генерация Markdown-отчёта для Приложения 1 Методики 1140.
+
+    Args:
+        app_instance: Экземпляр приложения
+        k: Коэффициент отношения площади
+        Fpom: Площадь помещения, м²
+        v: Линейная скорость распространения пламени, м/с
+        psi_ud: Удельная массовая скорость выгорания, кг/(с·м²)
+        m: Полная масса сгораемой нагрузки, кг
+        t: Время развития пожара, сек (пользовательское)
+        tmax: Время охвата пожаром всей поверхности, сек
+        Psi: Скорость выгорания, кг/с
+        Stt: Площадь поверхности горючей нагрузки, м²
+        bigM: Полная масса горючей нагрузки, кг
+        process_id: ID процесса
+
+    Returns:
+        str: Содержимое Markdown-отчёта
+    """
+    # Определяем тип распространения пожара (круговое по умолчанию)
+    fire_type = "круговом"
+
+    # Определяем класс функциональной пожарной опасности
+    fp_class = "Ф1 - Ф4"  # По умолчанию, k=2
+
+    report = []
+
+    # ===========================================================================
+    # ЗАГОЛОВОК
+    # ===========================================================================
+    report.append("# **Расчёт параметров пожара согласно Приложению 1 Методики 1140**\n")
+
+    # ===========================================================================
+    # 1. НОРМАТИВНАЯ БАЗА
+    # ===========================================================================
+    report.append("## **1. Нормативная база**\n")
+    report.append("Настоящий расчёт выполнен в соответствии с **Приложением 1 Методики 1140** — «Порядок проведения расчета и математическая модель для определения времени блокирования путей эвакуации опасными факторами пожара».\n")
+    report.append("Расчёт производится на основе экспертного выбора сценария пожара, при котором ожидаются наихудшие последствия для находящихся в здании людей.\n")
+    report.append("Формулировка сценария развития пожара включает следующие этапы:\n")
+    report.append("* выбор места нахождения первоначального очага пожара и закономерностей его развития;\n")
+    report.append("* задание расчётной области (выбор рассматриваемой при расчёте системы помещений, определение учитываемых при расчёте элементов внутренней структуры помещений, задание состояния проёмов);\n")
+    report.append("* задание параметров окружающей среды и начальных значений параметров внутри помещений.\n")
+    report.append("При расчёте рассматривается **круговое распространение пожара** по твёрдой горючей нагрузке.\n")
+
+    # ===========================================================================
+    # 2. ИСХОДНЫЕ ДАННЫЕ
+    # ===========================================================================
+    report.append("## **2. Исходные данные**\n")
+    report.append("Расчёт выполняется на основе следующих входных параметров:\n")
+    report.append("| **Параметр** | **Обозначение** | **Значение** | **Ед. изм.** |")
+    report.append("|:---|:---:|:---:|:---:|")
+    report.append(f"| Коэффициент отношения площади горючей нагрузки к площади помещения | $k$ | {safe_convert_to_float(k):.2f} | – |")
+    report.append(f"| Площадь помещения с очагом пожара | $F_{{пом}}$ | {safe_convert_to_float(Fpom):.2f} | м² |")
+    report.append(f"| Линейная скорость распространения пламени | $v$ | {safe_convert_to_float(v):.4f} | м/с |")
+    report.append(f"| Удельная массовая скорость выгорания | $\\psi_{{уд}}$ | {safe_convert_to_float(psi_ud):.4f} | кг/(с·м²) |")
+    report.append(f"| Полная масса сгораемой нагрузки | $m$ | {safe_convert_to_float(m):.2f} | кг |")
+    if safe_convert_to_float(t) != 0:
+        report.append(f"| Время развития пожара (задано пользователем) | $t$ | {safe_convert_to_float(t):.2f} | с |")
+    else:
+        report.append(f"| Время развития пожара | $t$ | — (расчётное) | с |")
+    report.append("")
+
+    # ===========================================================================
+    # 3. РАСЧЁТНЫЕ ФОРМУЛЫ
+    # ===========================================================================
+    report.append("## **3. Расчётные формулы**\n")
+    report.append("### **3.1. Время охвата пожаром всей поверхности горючей нагрузки**\n")
+    report.append("Время $t_{{max}}$ определяется по формуле для **кругового** распространения пожара:\n")
+    report.append("$$")
+    report.append(f"t_{{max}} = \\sqrt{{\\frac{{k \\cdot F_{{пом}}}}{{\\pi \\cdot v^2}}}}")
+    report.append("$$\n")
+    report.append("Подставляя значения:\n")
+    report.append("$$")
+    report.append(f"t_{{max}} = \\sqrt{{\\frac{{{safe_convert_to_float(k):.2f} \\cdot {safe_convert_to_float(Fpom):.2f}}}{{\\pi \\cdot {safe_convert_to_float(v):.4f}^2}}}} = {safe_convert_to_float(tmax):.4f} \\text{{ с}}")
+    report.append("$$\n")
+
+    if safe_convert_to_float(t) != 0:
+        report.append("> **Примечание:** Пользователем задано время развития пожара $t = " + f"{safe_convert_to_float(t):.2f}$ с. В расчёте принято $t_{{max}} = t = {safe_convert_to_float(tmax):.4f}$ с.\n")
+
+    report.append("**Физический смысл:** Время $t_{{max}}$ — это момент, когда фронт пламени достигает границ расчётной площади горючей нагрузки. До этого момента площадь горения растёт по закону круга $S = \\pi (vt)^2$, после — остаётся постоянной.\n")
+
+    report.append("### **3.2. Скорость выгорания**\n")
+    report.append("Зависимость скорости выгорания $\\Psi$ (кг/с) от времени для **кругового** распространения пожара определяется формулой:\n")
+    report.append("$$")
+    report.append(r"\Psi(t) = \begin{cases} \psi_{уд} \cdot \pi \cdot v^2 \cdot t^2 & \text{при } t \le t_{max} \\ \psi_{уд} \cdot \pi \cdot v^2 \cdot t_{max}^2 & \text{при } t > t_{max} \end{cases}, \quad \text{(П1.1)}")
+    report.append("$$\n")
+    report.append("где $\\psi_{{уд}}$ — удельная скорость выгорания (для жидкостей установившаяся), кг/(с·м²).\n")
+
+    if safe_convert_to_float(m) > 0:
+        report.append("При учёте полной массы сгораемой нагрузки $m = " + f"{safe_convert_to_float(m):.2f}$ кг скорость выгорания определяется как:\n")
+        report.append("$$")
+        report.append(f"\\Psi = \\frac{{m}}{{t_{{max}}}} = \\frac{{{safe_convert_to_float(m):.2f}}}{{{safe_convert_to_float(tmax):.4f}}} = {safe_convert_to_float(Psi):.4f} \\text{{ кг/с}}")
+        report.append("$$\n")
+    else:
+        report.append("Расчётная скорость выгорания:\n")
+        report.append("$$")
+        report.append(f"\\Psi = \\psi_{{уд}} \\cdot \\pi \\cdot v^2 \\cdot t_{{max}}^2 = {safe_convert_to_float(psi_ud):.4f} \\cdot \\pi \\cdot {safe_convert_to_float(v):.4f}^2 \\cdot {safe_convert_to_float(tmax):.4f}^2 = {safe_convert_to_float(Psi):.4f} \\text{{ кг/с}}")
+        report.append("$$\n")
+
+    report.append("### **3.3. Площадь поверхности горючей нагрузки, охватываемая пожаром**\n")
+    report.append("Площадь $S_{{tt}}$ определяется по формуле:\n")
+    report.append("$$")
+    report.append(f"S_{{tt}} = \\pi \\cdot (v \\cdot t_{{max}})^2 = \\pi \\cdot ({safe_convert_to_float(v):.4f} \\cdot {safe_convert_to_float(tmax):.4f})^2 = {safe_convert_to_float(Stt):.4f} \\text{{ м²}}")
+    report.append("$$\n")
+    report.append(f"Физический смысл: площадь поверхности горючей нагрузки в помещении, охватываемая пожаром за время $t_{{max}}$.\n")
+
+    report.append("### **3.4. Полная масса горючей нагрузки, охваченной пожаром**\n")
+    if safe_convert_to_float(m) > 0:
+        report.append("С учётом заданной пользователем массы $m$:\n")
+        report.append("$$")
+        report.append(f"M = m = {safe_convert_to_float(bigM):.4f} \\text{{ кг}}")
+        report.append("$$\n")
+    else:
+        report.append("Полная масса горючей нагрузки, охваченной пожаром за время $t_{{max}}$:\n")
+        report.append("$$")
+        report.append(f"M = \\Psi \\cdot t_{{max}} = {safe_convert_to_float(Psi):.4f} \\cdot {safe_convert_to_float(tmax):.4f} = {safe_convert_to_float(bigM):.4f} \\text{{ кг}}")
+        report.append("$$\n")
+
+    report.append("### **3.5. Полная тепловая мощность очага пожара**\n")
+    report.append("Полная тепловая мощность очага пожара $Q$ определяется по формуле:\n")
+    report.append("$$")
+    report.append(r"Q = H_c \cdot \Psi \cdot n \cdot 1000")
+    report.append("$$\n")
+    report.append("где:\n")
+    report.append(f"* $H_c$ — теплота сгорания, МДж/кг (из файла HOC);\n")
+    report.append(f"* $\\Psi = {safe_convert_to_float(Psi):.4f}$ кг/с — скорость выгорания;\n")
+    report.append(f"* $n = 0.93$ — коэффициент полноты сгорания;\n")
+    report.append(f"* множитель 1000 — перевод из МДж/с в кВт.\n")
+    report.append("$$")
+    report.append(f"Q = {safe_convert_to_float(HRRPUA):.4f} \\text{{ кВт}}")
+    report.append("$$\n")
+
+    # ===========================================================================
+    # 4. РЕЗУЛЬТАТЫ РАСЧЁТА
+    # ===========================================================================
+    report.append("## **4. Результаты расчёта**\n")
+    report.append("| **Параметр** | **Обозначение** | **Значение** | **Ед. изм.** |")
+    report.append("|:---|:---:|:---:|:---:|")
+    report.append(f"| Время охвата пожаром всей поверхности | $t_{{max}}$ | {safe_convert_to_float(tmax):.4f} | с |")
+    report.append(f"| Скорость выгорания | $\\Psi$ | {safe_convert_to_float(Psi):.4f} | кг/с |")
+    report.append(f"| Полная тепловая мощность очага пожара | $Q$ | {safe_convert_to_float(HRRPUA):.4f} | кВт |")
+    report.append(f"| Площадь поверхности горючей нагрузки | $S_{{tt}}$ | {safe_convert_to_float(Stt):.4f} | м² |")
+    report.append(f"| Полная масса горючей нагрузки | $M$ | {safe_convert_to_float(bigM):.4f} | кг |")
+    report.append("")
+
+    # ===========================================================================
+    # 5. ВЫВОДЫ И ОБОСНОВАНИЕ
+    # ===========================================================================
+    report.append("## **5. Выводы и обоснование**\n")
+    report.append("Расчёт параметров пожара выполнен в соответствии с **Приложением 1 Методики 1140**, регламентирующим порядок определения времени блокирования путей эвакуации опасными факторами пожара.\n")
+    report.append(f"На основе введённых пользователем исходных данных (коэффициент $k = {safe_convert_to_float(k):.2f}$, площадь помещения $F_{{пом}} = {safe_convert_to_float(Fpom):.2f}$ м², линейная скорость распространения пламени $v = {safe_convert_to_float(v):.4f}$ м/с, удельная массовая скорость выгорания $\\psi_{{уд}} = {safe_convert_to_float(psi_ud):.4f}$ кг/(с·м²)) рассчитаны ключевые параметры развития пожара:\n")
+    report.append(f"* **Время охвата пожаром всей поверхности** $t_{{max}} = {safe_convert_to_float(tmax):.4f}$ с — определяет момент, когда вся горючая нагрузка в помещении оказывается охваченной пламенем;\n")
+    report.append(f"* **Скорость выгорания** $\\Psi = {safe_convert_to_float(Psi):.4f}$ кг/с — характеризует интенсивность расхода горючей нагрузки;\n")
+    report.append(f"* **Полная тепловая мощность очага пожара** $Q = {safe_convert_to_float(HRRPUA):.4f}$ кВт — определяет энерговклад пожара в формирование опасных факторов;\n")
+    report.append(f"* **Площадь поверхности горючей нагрузки** $S_{{tt}} = {safe_convert_to_float(Stt):.4f}$ м² — площадь, охватываемая пожаром за время $t_{{max}}$;\n")
+    report.append(f"* **Полная масса горючей нагрузки** $M = {safe_convert_to_float(bigM):.4f}$ кг — масса горючего вещества, вовлечённого в горение.\n")
+
+    if safe_convert_to_float(m) > 0:
+        report.append(f"\nВ расчёте учтена сокращённая масса горючей нагрузки $m = {safe_convert_to_float(m):.2f}$ кг, что соответствует компенсирующим мероприятиям, направленным на сокращение горючей нагрузки в очаговой зоне.\n")
+
+    report.append("Полученные значения могут быть использованы для:\n")
+    report.append("* оценки времени блокирования путей эвакуации опасными факторами пожара;\n")
+    report.append("* определения необходимых параметров систем противопожарной защиты;\n")
+    report.append("* верификации численных моделей в программах полей (FDS и др.).\n")
+
+    # ===========================================================================
+    # ПОДПИСЬ
+    # ===========================================================================
+    report.append("---\n")
+    report.append("*Расчёт выполнен в соответствии с Приложением 1 Методики 1140.*\n")
+
+    return "\n".join(report)
+
+
+def export_report_md(app_instance, k, Fpom, v, psi_ud, m, t, tmax, Psi, Stt, bigM, HRRPUA, process_id):
+    """
+    Экспорт отчёта в Markdown файл.
+
+    Args:
+        app_instance: Экземпляр приложения (QMainWindow)
+        ... параметры расчёта ...
+        process_id: ID процесса
+    """
+    from PyQt6.QtWidgets import QFileDialog, QMessageBox
+
+    file_path, _ = QFileDialog.getSaveFileName(
+        app_instance, "Сохранить отчёт (MD)", "report_annex_1.md",
+        "Markdown File (*.md);;All Files (*)")
+
+    if file_path:
+        try:
+            report_content = generate_report_md(
+                app_instance, k, Fpom, v, psi_ud, m, t, tmax, Psi, Stt, bigM, HRRPUA, process_id)
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(report_content)
+            QMessageBox.information(
+                app_instance, "Экспорт завершён",
+                f"Отчёт успешно сохранён в:\n{file_path}")
+        except Exception as e:
+            QMessageBox.critical(
+                app_instance, "Ошибка экспорта",
+                f"Не удалось сохранить отчёт: {e}")
+
+
+def export_report_docx(app_instance, k, Fpom, v, psi_ud, m, t, tmax, Psi, Stt, bigM, HRRPUA, process_id):
+    """
+    Экспорт отчёта в DOCX файл через md_to_docx.
+
+    Args:
+        app_instance: Экземпляр приложения (QMainWindow)
+        ... параметры расчёта ...
+        process_id: ID процесса
+    """
+    from PyQt6.QtWidgets import QFileDialog, QMessageBox
+    import tempfile
+
+    file_path, _ = QFileDialog.getSaveFileName(
+        app_instance, "Сохранить отчёт (DOCX)", "report_1140.docx",
+        "Word Document (*.docx);;All Files (*)")
+
+    if file_path:
+        try:
+            # Генерируем MD содержимое
+            report_content = generate_report_md(
+                app_instance, k, Fpom, v, psi_ud, m, t, tmax, Psi, Stt, bigM, HRRPUA, process_id)
+
+            # Создаём временный MD файл
+            temp_md = os.path.join(tempfile.gettempdir(), f"temp_report_1140_{os.getpid()}.md")
+            with open(temp_md, 'w', encoding='utf-8') as f:
+                f.write(report_content)
+
+            try:
+                from md_to_docx import MarkdownToDocxConverter
+
+                # Определяем путь к pandoc
+                current_directory = os.path.dirname(__file__)
+                pandoc_exe = os.path.join(current_directory, 'pandoc_embed', 'pandoc.exe')
+
+                converter = MarkdownToDocxConverter(
+                    use_pandoc=True,
+                    pandoc_path=pandoc_exe if os.path.isfile(pandoc_exe) else None)
+
+                success = converter.convert(temp_md, file_path, preserve_images=True)
+
+                if success:
+                    QMessageBox.information(
+                        app_instance, "Экспорт завершён",
+                        f"Отчёт DOCX успешно сохранён в:\n{file_path}")
+                else:
+                    QMessageBox.warning(
+                        app_instance, "Упрощённая конвертация",
+                        "Pandoc не найден. Конвертация выполнена в упрощённом режиме.")
+            except ImportError:
+                QMessageBox.critical(
+                    app_instance, "Ошибка",
+                    "Модуль md_to_docx не найден. Убедитесь, что файл md_to_docx.py находится в той же директории.")
+            finally:
+                if os.path.exists(temp_md):
+                    os.unlink(temp_md)
+
+        except Exception as e:
+            QMessageBox.critical(
+                app_instance, "Ошибка экспорта",
+                f"Не удалось сохранить отчёт DOCX: {e}")
+
