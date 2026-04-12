@@ -1113,7 +1113,7 @@ def export_report_docx(app_instance, k, Fpom, v, psi_ud, m, t, tmax, Psi, Stt, b
     import tempfile
 
     file_path, _ = QFileDialog.getSaveFileName(
-        app_instance, "Сохранить отчёт (DOCX)", "report_1140.docx",
+        app_instance, "Сохранить отчёт (DOCX)", "report_annex_1.docx",
         "Word Document (*.docx);;All Files (*)")
 
     if file_path:
@@ -1123,7 +1123,7 @@ def export_report_docx(app_instance, k, Fpom, v, psi_ud, m, t, tmax, Psi, Stt, b
                 app_instance, k, Fpom, v, psi_ud, m, t, tmax, Psi, Stt, bigM, HRRPUA, process_id)
 
             # Создаём временный MD файл
-            temp_md = os.path.join(tempfile.gettempdir(), f"temp_report_1140_{os.getpid()}.md")
+            temp_md = os.path.join(tempfile.gettempdir(), f"temp_report_annex_1_{os.getpid()}.md")
             with open(temp_md, 'w', encoding='utf-8') as f:
                 f.write(report_content)
 
