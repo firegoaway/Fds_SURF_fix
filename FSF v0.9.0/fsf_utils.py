@@ -31,11 +31,11 @@ def get_input_style_common():
     """Возвращает общий стиль для полей ввода."""
     return """
         QLineEdit {
-            padding: 12px;
+            padding: 6px 8px;
             border: 1px solid #cbd5e1;
-            border-radius: 5px;
+            border-radius: 4px;
             background-color: white;
-            font-size: 14px;
+            font-size: 13px;
         }
         QLineEdit:focus {
             border: 2px solid #7dd3fc;
@@ -67,10 +67,11 @@ def get_button_style_common():
             background-color: #bae6fd;
             color: #0369a1;
             border: none;
-            border-radius: 5px;
-            padding: 6px 15px;
+            border-radius: 4px;
+            padding: 4px 12px;
             font-weight: bold;
             min-width: 110px;
+            min-height: 28px;
         }
         QPushButton:hover {
             background-color: #7dd3fc;
@@ -116,8 +117,9 @@ def get_group_box_style():
         QGroupBox {
             font-weight: bold;
             border: 1px solid #bfdbfe;
-            border-radius: 8px;
+            border-radius: 6px;
             margin-top: 1ex;
+            padding-top: 6px;
             background-color: rgba(255, 255, 255, 200);
         }
         QGroupBox::title {
@@ -149,14 +151,14 @@ def create_input_field_common(app_instance, label_text, hint_text, tooltip_text,
     if prefix:
         prefix_label = QLabel(prefix)
         prefix_label.setStyleSheet(get_label_style())
-        prefix_label.setFont(QFont("Arial", 14, QFont.Weight.Bold))
+        prefix_label.setFont(QFont("Arial", 12, QFont.Weight.Bold))
         # Removed fixed width for prefix to allow natural sizing
         layout.addWidget(prefix_label)
 
     # Create main label
     label = QLabel(label_text)
     label.setStyleSheet(get_label_style())
-    label.setFont(QFont("Arial", 14))
+    label.setFont(QFont("Arial", 12))
     label.setFixedWidth(40)  # Fixed width for main label text to ensure alignment
     layout.addWidget(label)
 
@@ -264,12 +266,14 @@ def calculate_common(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_e
         eta = 0.93
 
         if m > 0:
-            bigM = Psi * tmax
-            Psi = m / tmax
             bigM = m
+            Psi = m / tmax
             HRRPUA = Hc * Psi * eta * 1000
         else:
-            bigM = Psi * tmax
+            # Интегральное вычисление массы: M = ∫₀ᵗᵐᵃˣ Ψ(t) dt
+            # Ψ(t) = ψ_уд · π · v² · t² → M = (ψ_уд · π · v² · t_max³) / 3
+            # Поскольку Psi = ψ_уд · π · v² · t_max², то M = Psi · t_max / 3
+            bigM = Psi * tmax / 3.0
             HRRPUA = Hc * Psi * eta * 1000
         tmax_entry[1].setText(f"{tmax:.4f}")
         psy_entry[1].setText(f"{Psi:.4f}")
@@ -314,12 +318,12 @@ def calculate_fds5(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_ent
         eta = 0.93
 
         if m > 0:
-            bigM = Psi * tmax
-            Psi = m / tmax
             bigM = m
+            Psi = m / tmax
             HRRPUA = Hc * Psi * eta * 1000
         else:
-            bigM = Psi * tmax
+            # Интегральное вычисление массы: M = Ψ · t_max / 3
+            bigM = Psi * tmax / 3.0
             Psi = 0.45 * (1 / k) * (bigM / tmax)
             HRRPUA = Hc * Psi * eta * 1000
 
@@ -381,8 +385,13 @@ def read_ini_file_hoc(ini_file):
         config.read_file(f)
     return config['HEAT_OF_COMBUSTION']['HEAT_OF_COMBUSTION']
 
-def process_fds_file_common(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_entry, t_entry, tmax_entry, psy_entry, hrr_entry, stt_entry, bigM_entry, process_button, process_id, read_ini_file_path_func, read_ini_file_hoc_func, status_bar):
-    """Обработка FDS файла для common."""
+def process_fds_file_common(app_instance, k_entry, fpom_entry, psyd_entry, v_entry, m_entry, t_entry, tmax_entry, psy_entry, hrr_entry, stt_entry, bigM_entry, process_button, process_id, read_ini_file_path_func, read_ini_file_hoc_func, status_bar, aupt_enabled=False, t_aupt_str=""):
+    """Обработка FDS файла для common.
+
+    Args:
+        aupt_enabled: Если True, используется RAMP_Q с уменьшением MLR в 2 раза после t_АУПТ.
+        t_aupt_str: Время сработки АУПТ в секундах (используется только при aupt_enabled=True).
+    """
     k = k_entry[1].text()
     Fpom = fpom_entry[1].text()
     v_val_str = v_entry[1].text()
@@ -409,19 +418,26 @@ def process_fds_file_common(app_instance, k_entry, fpom_entry, psyd_entry, v_ent
         v_val = safe_convert_to_float(v_val_str)
         m_val = safe_convert_to_float(m_val_str)
         t_val = safe_convert_to_float(t_val_str)
-        # Если t задано и не равно 0, используем его как TAU_Q, иначе рассчитанный tmax
-        TAU_Q = -t_val if t_val != 0 else -safe_convert_to_float(tmax)
+        t_max_val = safe_convert_to_float(tmax)
         eta = 0.93
 
         fds_path = read_ini_file_path_func(ini_path)
 
         if m_val > 0:
-            MLRPUA = m_val / -TAU_Q
+            MLRPUA = m_val / t_max_val
         else:
             MLRPUA = safe_convert_to_float(Psi_str)
         HRRPUA_val = Hc * MLRPUA * eta * 1000
-        if not MLRPUA or not TAU_Q:
+        if not MLRPUA:
             raise ValueError("Поля не должны быть пустыми")
+
+        # Параметры для RAMP
+        t_user = t_val
+        t_ramp = min(t_user, t_max_val) if t_user > 0 else t_max_val
+
+        # Определяем режим: TAU_Q или RAMP_Q с АУПТ
+        use_aupt = aupt_enabled and t_aupt_str
+        t_aupt = safe_convert_to_float(t_aupt_str) if use_aupt else 0.0
 
         modified_lines = []
         inside_surf_block = False
@@ -444,7 +460,13 @@ def process_fds_file_common(app_instance, k_entry, fpom_entry, psyd_entry, v_ent
                         modified_lines.append(f"&SURF ID='{surf_id}', ")
                         modified_lines.append(f"HRRPUA={HRRPUA_val}, ")
                         modified_lines.append(f"COLOR='RED', ")
-                        modified_lines.append(f"TAU_Q={TAU_Q}/\n")
+                        if use_aupt and t_aupt > 0:
+                            # Режим АУПТ: RAMP_Q вместо TAU_Q
+                            modified_lines.append(f"RAMP_Q='RAMP_CALC'/\n")
+                        else:
+                            # Обычный режим: TAU_Q
+                            TAU_Q = -t_val if t_val != 0 else -t_max_val
+                            modified_lines.append(f"TAU_Q={TAU_Q}/\n")
                     else:
                         hrrpua_found = False
                         modified_lines.append(line)
@@ -480,6 +502,20 @@ def process_fds_file_common(app_instance, k_entry, fpom_entry, psyd_entry, v_ent
                     remove_ctrl_ramp = False
 
                 modified_lines.append(line)
+
+        # Удаляем старые RAMP_CALC только при АУПТ
+        if use_aupt and t_aupt > 0:
+            modified_lines = [ln for ln in modified_lines
+                              if not (ln.strip().startswith('&RAMP') and "ID='RAMP_CALC'" in ln)]
+
+            # Вставляем RAMP_Q с уменьшением MLR в 2 раза после t_АУПТ
+            ramp_lines = generate_ramp_aupt_lines(t_ramp, t_aupt, t_user, t_max_val)
+
+            tail_idx = next((i for i, ln in enumerate(modified_lines) if ln.strip().startswith('&TAIL')), None)
+            if tail_idx is None:
+                modified_lines.extend(ramp_lines)
+            else:
+                modified_lines[tail_idx:tail_idx] = ramp_lines
 
         output_dir = os.path.dirname(fds_path)
         os.makedirs(output_dir, exist_ok=True)
@@ -915,118 +951,286 @@ def generate_report_md(app_instance, k, Fpom, v, psi_ud, m, t, tmax, Psi, Stt, b
     Returns:
         str: Содержимое Markdown-отчёта
     """
-    # Определяем тип распространения пожара (круговое по умолчанию)
-    fire_type = "круговом"
+    v_val = safe_convert_to_float(v)
+    k_val = safe_convert_to_float(k)
+    Fpom_val = safe_convert_to_float(Fpom)
+    psi_ud_val = safe_convert_to_float(psi_ud)
+    m_val = safe_convert_to_float(m)
+    t_val = safe_convert_to_float(t)
+    tmax_val = safe_convert_to_float(tmax)
+    Psi_val = safe_convert_to_float(Psi)
+    Stt_val = safe_convert_to_float(Stt)
+    bigM_val = safe_convert_to_float(bigM)
+    HRRPUA_val = safe_convert_to_float(HRRPUA)
 
-    # Определяем класс функциональной пожарной опасности
-    fp_class = "Ф1 - Ф4"  # По умолчанию, k=2
+    # Определяем, задано ли пользователем время
+    t_user_specified = (t_val != 0)
+    # Определяем, задана ли пользователем масса
+    m_user_specified = (m_val > 0)
 
     report = []
 
     # ===========================================================================
     # ЗАГОЛОВОК
     # ===========================================================================
-    report.append("# **Расчёт параметров пожара согласно Приложению 1 Методики 1140**\n")
+    report.append("# **Расчёт параметров развития пожара в соответствии с Приложением 1 Методики 1140**\n")
 
     # ===========================================================================
     # 1. НОРМАТИВНАЯ БАЗА
     # ===========================================================================
     report.append("## **1. Нормативная база**\n")
-    report.append("Настоящий расчёт выполнен в соответствии с **Приложением 1 Методики 1140** — «Порядок проведения расчета и математическая модель для определения времени блокирования путей эвакуации опасными факторами пожара».\n")
-    report.append("Расчёт производится на основе экспертного выбора сценария пожара, при котором ожидаются наихудшие последствия для находящихся в здании людей.\n")
-    report.append("Формулировка сценария развития пожара включает следующие этапы:\n")
-    report.append("* выбор места нахождения первоначального очага пожара и закономерностей его развития;\n")
-    report.append("* задание расчётной области (выбор рассматриваемой при расчёте системы помещений, определение учитываемых при расчёте элементов внутренней структуры помещений, задание состояния проёмов);\n")
-    report.append("* задание параметров окружающей среды и начальных значений параметров внутри помещений.\n")
-    report.append("При расчёте рассматривается **круговое распространение пожара** по твёрдой горючей нагрузке.\n")
+    report.append(
+        "Настоящий расчёт выполнен согласно **Приложению 1 Методики 1140** – "
+        "«Порядок проведения расчета и математическая модель для определения времени "
+        "блокирования путей эвакуации опасными факторами пожара».\n"
+    )
+    report.append(
+        "Расчёт опирается на экспертный выбор сценария пожара, предполагающего "
+        "наихудшие последствия для людей, находящихся в здании. Формулировка "
+        "сценария включает выбор месторасположения первоначального очага пожара, "
+        "задание расчётной области с определением учитываемых элементов внутренней "
+        "структуры помещений и состояний проёмов, а также задание параметров "
+        "окружающей среды и начальных условий.\n"
+    )
+    report.append(
+        "В рамках настоящего расчёта рассматривается **круговое распространение "
+        "пламени** по поверхности твёрдой горючей нагрузки, при котором фронт "
+        "горения равномерно удаляется от центра очага, образуя круговую область "
+        "горения, площадь которой нарастает пропорционально квадрату времени.\n"
+    )
 
     # ===========================================================================
     # 2. ИСХОДНЫЕ ДАННЫЕ
     # ===========================================================================
     report.append("## **2. Исходные данные**\n")
-    report.append("Расчёт выполняется на основе следующих входных параметров:\n")
+    report.append("Расчёт выполнен на основе следующих параметров:\n")
     report.append("| **Параметр** | **Обозначение** | **Значение** | **Ед. изм.** |")
     report.append("|:---|:---:|:---:|:---:|")
-    report.append(f"| Коэффициент отношения площади горючей нагрузки к площади помещения | $k$ | {safe_convert_to_float(k):.2f} | – |")
-    report.append(f"| Площадь помещения с очагом пожара | $F_{{пом}}$ | {safe_convert_to_float(Fpom):.2f} | м² |")
-    report.append(f"| Линейная скорость распространения пламени | $v$ | {safe_convert_to_float(v):.4f} | м/с |")
-    report.append(f"| Удельная массовая скорость выгорания | $\\psi_{{уд}}$ | {safe_convert_to_float(psi_ud):.4f} | кг/(с·м²) |")
-    report.append(f"| Полная масса сгораемой нагрузки | $m$ | {safe_convert_to_float(m):.2f} | кг |")
-    if safe_convert_to_float(t) != 0:
-        report.append(f"| Время развития пожара (задано пользователем) | $t$ | {safe_convert_to_float(t):.2f} | с |")
+    report.append(
+        f"| Коэффициент отношения площади горючей нагрузки к площади помещения | $k$ | {k_val:.2f} | – |"
+    )
+    report.append(
+        f"| Площадь помещения с очагом пожара | $F_{{пом}}$ | {Fpom_val:.2f} | м² |"
+    )
+    report.append(
+        f"| Линейная скорость распространения пламени | $v$ | {v_val:.4f} | м/с |"
+    )
+    report.append(
+        f"| Удельная массовая скорость выгорания | $\\psi_{{уд}}$ | {psi_ud_val:.4f} | кг/(с·м²) |"
+    )
+
+    if m_user_specified:
+        report.append(
+            f"| Масса сгораемой нагрузки (сокращённая, с учётом компенсирующих мероприятий) | $m$ | {m_val:.2f} | кг |"
+        )
     else:
-        report.append(f"| Время развития пожара | $t$ | — (расчётное) | с |")
+        report.append(
+            f"| Полная масса сгораемой нагрузки (расчётная) | $m$ | – | кг |"
+        )
+
+    if t_user_specified:
+        report.append(
+            f"| Время развития пожара (задано пользователем) | $t$ | {t_val:.2f} | с |"
+        )
+    else:
+        report.append(
+            f"| Время развития пожара (определяется расчётом) | $t$ | – | с |"
+        )
     report.append("")
 
     # ===========================================================================
     # 3. РАСЧЁТНЫЕ ФОРМУЛЫ
     # ===========================================================================
-    report.append("## **3. Расчётные формулы**\n")
+    report.append("## **3. Расчётные формулы и результаты**\n")
+
+    # --- 3.1. Время охвата ---
     report.append("### **3.1. Время охвата пожаром всей поверхности горючей нагрузки**\n")
-    report.append("Время $t_{{max}}$ определяется по формуле для **кругового** распространения пожара:\n")
+    report.append(
+        "В соответствии с моделью кругового распространения пожара время $t_{{max}}$, "
+        "необходимое для того, чтобы фронт пламени охватил всю расчётную площадь "
+        "горючей нагрузки, определяется из условия равенства площади круга, "
+        "образуемого фронтом пламени, и площади горючей нагрузки, заданной "
+        "через коэффициент $k$ и площадь помещения $F_{{пом}}$:\n"
+    )
     report.append("$$")
-    report.append(f"t_{{max}} = \\sqrt{{\\frac{{k \\cdot F_{{пом}}}}{{\\pi \\cdot v^2}}}}")
+    report.append(
+        f"t_{{max}} = \\sqrt{{\\frac{{k \\cdot F_{{пом}}}}{{\\pi \\cdot v^2}}}} = "
+        f"\\sqrt{{\\frac{{{k_val:.2f} \\cdot {Fpom_val:.2f}}}{{\\pi \\cdot {v_val:.4f}^2}}}} = "
+        f"{tmax_val:.4f} \\text{{ с}}"
+    )
     report.append("$$\n")
-    report.append("Подставляя значения:\n")
-    report.append("$$")
-    report.append(f"t_{{max}} = \\sqrt{{\\frac{{{safe_convert_to_float(k):.2f} \\cdot {safe_convert_to_float(Fpom):.2f}}}{{\\pi \\cdot {safe_convert_to_float(v):.4f}^2}}}} = {safe_convert_to_float(tmax):.4f} \\text{{ с}}")
-    report.append("$$\n")
 
-    if safe_convert_to_float(t) != 0:
-        report.append("> **Примечание:** Пользователем задано время развития пожара $t = " + f"{safe_convert_to_float(t):.2f}$ с. В расчёте принято $t_{{max}} = t = {safe_convert_to_float(tmax):.4f}$ с.\n")
-
-    report.append("**Физический смысл:** Время $t_{{max}}$ — это момент, когда фронт пламени достигает границ расчётной площади горючей нагрузки. До этого момента площадь горения растёт по закону круга $S = \\pi (vt)^2$, после — остаётся постоянной.\n")
-
-    report.append("### **3.2. Скорость выгорания**\n")
-    report.append("Зависимость скорости выгорания $\\Psi$ (кг/с) от времени для **кругового** распространения пожара определяется формулой:\n")
-    report.append("$$")
-    report.append(r"\Psi(t) = \begin{cases} \psi_{уд} \cdot \pi \cdot v^2 \cdot t^2 & \text{при } t \le t_{max} \\ \psi_{уд} \cdot \pi \cdot v^2 \cdot t_{max}^2 & \text{при } t > t_{max} \end{cases}, \quad \text{(П1.1)}")
-    report.append("$$\n")
-    report.append("где $\\psi_{{уд}}$ — удельная скорость выгорания (для жидкостей установившаяся), кг/(с·м²).\n")
-
-    if safe_convert_to_float(m) > 0:
-        report.append("При учёте полной массы сгораемой нагрузки $m = " + f"{safe_convert_to_float(m):.2f}$ кг скорость выгорания определяется как:\n")
-        report.append("$$")
-        report.append(f"\\Psi = \\frac{{m}}{{t_{{max}}}} = \\frac{{{safe_convert_to_float(m):.2f}}}{{{safe_convert_to_float(tmax):.4f}}} = {safe_convert_to_float(Psi):.4f} \\text{{ кг/с}}")
-        report.append("$$\n")
+    if t_user_specified:
+        report.append(
+            f"Поскольку пользователем задано время развития пожара $t = {t_val:.2f}$ с, "
+            f"в расчёте время охвата пожаром поверхности принято равным этому значению, "
+            f"то есть $t_{{max}} = t = {tmax_val:.4f}$ с. Таким образом, расчётная модель "
+            f"предполагает, что за время, указанное пользователем, пламя успевает "
+            f"достичь границ горючей нагрузки, охватывая площадь {Stt_val:.4f} м².\n"
+        )
     else:
-        report.append("Расчётная скорость выгорания:\n")
-        report.append("$$")
-        report.append(f"\\Psi = \\psi_{{уд}} \\cdot \\pi \\cdot v^2 \\cdot t_{{max}}^2 = {safe_convert_to_float(psi_ud):.4f} \\cdot \\pi \\cdot {safe_convert_to_float(v):.4f}^2 \\cdot {safe_convert_to_float(tmax):.4f}^2 = {safe_convert_to_float(Psi):.4f} \\text{{ кг/с}}")
-        report.append("$$\n")
+        report.append(
+            f"Таким образом, при заданных исходных данных фронт пламени, "
+            f"распространяясь с линейной скоростью {v_val:.4f} м/с, достигает "
+            f"границ расчётной площади горючей нагрузки через {tmax_val:.4f} с. "
+            f"До достижения этого момента площадь горения возрастает по закону "
+            f"круга $S = \\pi (vt)^2$, после чего остаётся постоянной, "
+            f"поскольку весь объём горючей нагрузки уже охвачен горением.\n"
+        )
 
+    # --- 3.2. Скорость выгорания ---
+    report.append("### **3.2. Зависимость скорости выгорания от времени**\n")
+    report.append(
+        "Зависимость скорости выгорания $\\Psi$ (кг/с) от времени для кругового "
+        "распространения пожара, описываемая формулой (П1.1) Приложения 1 Методики 1140, "
+        "имеет вид:\n"
+    )
+    report.append("$$")
+    report.append(
+        r"\Psi(t) = \begin{cases} "
+        r"\psi_{уд} \cdot \pi \cdot v^2 \cdot t^2 & \text{при } t \le t_{max} \\ "
+        r"\psi_{уд} \cdot \pi \cdot v^2 \cdot t_{max}^2 & \text{при } t > t_{max} "
+        r"\end{cases}, \quad \text{(П1.1)}"
+    )
+    report.append("$$\n")
+    report.append(
+        "Физический смысл данной зависимости заключается в том, что на начальной "
+        "стадии развития пожара, пока фронт пламени ещё не достиг границ горючей "
+        "нагрузки, скорость выгорания нарастает пропорционально квадрату времени, "
+        "что обусловлено увеличением площади поверхности горения. По достижении "
+        "момента $t_{{max}}$, когда вся горючая нагрузка оказывается охваченной "
+        "горением, скорость выгорания выходит на постоянное значение и более "
+        "не изменяется.\n"
+    )
+
+    if m_user_specified:
+        report.append(
+            f"С учётом того, что в расчёте задана сокращённая масса горючей нагрузки "
+            f"$m = {m_val:.2f}$ кг, соответствующая компенсирующим мероприятиям "
+            f"по уменьшению пожарной нагрузки в очаговой зоне, скорость выгорания "
+            f"определяется как отношение массы к времени охвата:\n"
+        )
+        report.append("$$")
+        report.append(
+            f"\\Psi = \\frac{{m}}{{t_{{max}}}} = "
+            f"\\frac{{{m_val:.2f}}}{{{tmax_val:.4f}}} = "
+            f"{Psi_val:.4f} \\text{{ кг/с}}"
+        )
+        report.append("$$\n")
+        report.append(
+            f"Следовательно, при заданной массе {m_val:.2f} кг и времени охвата "
+            f"{tmax_val:.4f} с средняя скорость выгорания составляет {Psi_val:.4f} кг/с, "
+            f"что отражает интенсивность расхода горючего вещества в единицу времени.\n"
+        )
+    else:
+        report.append(
+            f"Подставляя исходные данные в формулу (П1.1) при $t = t_{{max}}$, "
+            f"получаем расчётное значение скорости выгорания:\n"
+        )
+        report.append("$$")
+        report.append(
+            f"\\Psi = \\psi_{{уд}} \\cdot \\pi \\cdot v^2 \\cdot t_{{max}}^2 = "
+            f"{psi_ud_val:.4f} \\cdot \\pi \\cdot {v_val:.4f}^2 \\cdot {tmax_val:.4f}^2 = "
+            f"{Psi_val:.4f} \\text{{ кг/с}}"
+        )
+        report.append("$$\n")
+        report.append(
+            f"Таким образом, к моменту полного охвата горючей нагрузки пламенем "
+            f"скорость выгорания достигает {Psi_val:.4f} кг/с, что характеризует "
+            f"максимальную интенсивность расхода горючего вещества при данном "
+            f"сценарии развития пожара.\n"
+        )
+
+    # --- 3.3. Площадь поверхности ---
     report.append("### **3.3. Площадь поверхности горючей нагрузки, охватываемая пожаром**\n")
-    report.append("Площадь $S_{{tt}}$ определяется по формуле:\n")
+    report.append(
+        "Площадь $S_{{tt}}$, охватываемая пожаром за время $t_{{max}}$, "
+        "определяется как площадь круга с радиусом, равным произведению "
+        "линейной скорости распространения пламени на время охвата:\n"
+    )
     report.append("$$")
-    report.append(f"S_{{tt}} = \\pi \\cdot (v \\cdot t_{{max}})^2 = \\pi \\cdot ({safe_convert_to_float(v):.4f} \\cdot {safe_convert_to_float(tmax):.4f})^2 = {safe_convert_to_float(Stt):.4f} \\text{{ м²}}")
+    report.append(
+        f"S_{{tt}} = \\pi \\cdot (v \\cdot t_{{max}})^2 = "
+        f"\\pi \\cdot ({v_val:.4f} \\cdot {tmax_val:.4f})^2 = "
+        f"{Stt_val:.4f} \\text{{ м²}}"
+    )
     report.append("$$\n")
-    report.append(f"Физический смысл: площадь поверхности горючей нагрузки в помещении, охватываемая пожаром за время $t_{{max}}$.\n")
+    report.append(
+        f"Иными словами, за время {tmax_val:.4f} с пламя, распространяясь "
+        f"со скоростью {v_val:.4f} м/с, охватывает поверхность горючей нагрузки "
+        f"площадью {Stt_val:.4f} м². Данная величина соответствует площади помещения "
+        f"с учётом коэффициента $k = {k_val:.2f}$ и характеризует масштаб очага "
+        f"пожара на момент полного охвата горючей нагрузки.\n"
+    )
 
+    # --- 3.4. Полная масса ---
     report.append("### **3.4. Полная масса горючей нагрузки, охваченной пожаром**\n")
-    if safe_convert_to_float(m) > 0:
-        report.append("С учётом заданной пользователем массы $m$:\n")
+    if m_user_specified:
+        report.append(
+            f"Поскольку в расчёте использована сокращённая масса горючей нагрузки, "
+            f"заданная пользователем как $m = {m_val:.2f}$ кг, полная масса, "
+            f"охваченная пожаром, принимается равной этому значению:\n"
+        )
         report.append("$$")
-        report.append(f"M = m = {safe_convert_to_float(bigM):.4f} \\text{{ кг}}")
+        report.append(f"M = m = {bigM_val:.4f} \\text{{ кг}}")
         report.append("$$\n")
+        report.append(
+            f"Таким образом, с учётом проведённых компенсирующих мероприятий "
+            f"по сокращению пожарной нагрузки в массе {bigM_val:.4f} кг "
+            f"горючее вещество полностью вовлекается в процесс горения "
+            f"за время {tmax_val:.4f} с.\n"
+        )
     else:
-        report.append("Полная масса горючей нагрузки, охваченной пожаром за время $t_{{max}}$:\n")
+        report.append(
+            f"Полная масса горючей нагрузки, охваченной пожаром за время $t_{{max}}$, "
+            f"определяется интегрированием скорости выгорания по времени:\n"
+        )
         report.append("$$")
-        report.append(f"M = \\Psi \\cdot t_{{max}} = {safe_convert_to_float(Psi):.4f} \\cdot {safe_convert_to_float(tmax):.4f} = {safe_convert_to_float(bigM):.4f} \\text{{ кг}}")
+        report.append(
+            f"M = \\int_0^{{t_{{max}}}} \\Psi(t) \\, dt = "
+            f"\\int_0^{{t_{{max}}}} \\psi_{{уд}} \\cdot \\pi \\cdot v^2 \\cdot t^2 \\, dt = "
+            f"\\frac{{\\psi_{{уд}} \\cdot \\pi \\cdot v^2 \\cdot t_{{max}}^3}}{{3}} = "
+            f"\\frac{{{psi_ud_val:.4f} \\cdot \\pi \\cdot {v_val:.4f}^2 \\cdot {tmax_val:.4f}^3}}{{3}} = "
+            f"{bigM_val:.4f} \\text{{ кг}}"
+        )
         report.append("$$\n")
+        report.append(
+            f"Иными словами, поскольку скорость выгорания $\\Psi(t)$ нарастает "
+            f"пропорционально квадрату времени, полная масса, вовлечённая "
+            f"в процесс горения за время {tmax_val:.4f} с, составляет "
+            f"{bigM_val:.4f} кг. Заметим, что данная величина втрое меньше "
+            f"произведения $\\Psi(t_{{max}}) \\cdot t_{{max}}$, что обусловлено "
+            f"нелинейным характером нарастания скорости выгорания.\n"
+        )
 
+    # --- 3.5. Полная тепловая мощность ---
     report.append("### **3.5. Полная тепловая мощность очага пожара**\n")
-    report.append("Полная тепловая мощность очага пожара $Q$ определяется по формуле:\n")
+    report.append(
+        "Полная тепловая мощность очага пожара $Q$, определяющая энерговклад "
+        "горения в формирование опасных факторов пожара, вычисляется как "
+        "произведение теплоты сгорания вещества на скорость выгорания "
+        "с учётом коэффициента полноты сгорания:\n"
+    )
     report.append("$$")
-    report.append(r"Q = H_c \cdot \Psi \cdot n \cdot 1000")
+    report.append(r"Q = H_c \cdot \Psi \cdot \eta \cdot 1000")
     report.append("$$\n")
-    report.append("где:\n")
-    report.append(f"* $H_c$ — теплота сгорания, МДж/кг (из файла HOC);\n")
-    report.append(f"* $\\Psi = {safe_convert_to_float(Psi):.4f}$ кг/с — скорость выгорания;\n")
-    report.append(f"* $n = 0.93$ — коэффициент полноты сгорания;\n")
-    report.append(f"* множитель 1000 — перевод из МДж/с в кВт.\n")
+    report.append(
+        f"где $H_c$ – теплота сгорания вещества, МДж/кг (принята из файла HOC); "
+        f"$\\Psi = {Psi_val:.4f}$ кг/с – скорость выгорания; "
+        f"$\\eta = 0.93$ – коэффициент полноты сгорания, учитывающий долю "
+        f"теплоты, реально выделяющейся в процессе горения; множитель 1000 "
+        f"обеспечивает перевод из МДж/с в кВт.\n"
+    )
     report.append("$$")
-    report.append(f"Q = {safe_convert_to_float(HRRPUA):.4f} \\text{{ кВт}}")
+    report.append(f"Q = {HRRPUA_val:.4f} \\text{{ кВт}}")
     report.append("$$\n")
+    report.append(
+        f"Таким образом, полная тепловая мощность очага пожара составляет "
+        f"{HRRPUA_val:.4f} кВт, что характеризует количество тепловой энергии, "
+        f"выделяющейся в единицу времени при горении заданной нагрузки "
+        f"и определяющей интенсивность нарастания опасных факторов пожара "
+        f"в помещении.\n"
+    )
 
     # ===========================================================================
     # 4. РЕЗУЛЬТАТЫ РАСЧЁТА
@@ -1034,32 +1238,89 @@ def generate_report_md(app_instance, k, Fpom, v, psi_ud, m, t, tmax, Psi, Stt, b
     report.append("## **4. Результаты расчёта**\n")
     report.append("| **Параметр** | **Обозначение** | **Значение** | **Ед. изм.** |")
     report.append("|:---|:---:|:---:|:---:|")
-    report.append(f"| Время охвата пожаром всей поверхности | $t_{{max}}$ | {safe_convert_to_float(tmax):.4f} | с |")
-    report.append(f"| Скорость выгорания | $\\Psi$ | {safe_convert_to_float(Psi):.4f} | кг/с |")
-    report.append(f"| Полная тепловая мощность очага пожара | $Q$ | {safe_convert_to_float(HRRPUA):.4f} | кВт |")
-    report.append(f"| Площадь поверхности горючей нагрузки | $S_{{tt}}$ | {safe_convert_to_float(Stt):.4f} | м² |")
-    report.append(f"| Полная масса горючей нагрузки | $M$ | {safe_convert_to_float(bigM):.4f} | кг |")
+    report.append(
+        f"| Время охвата пожаром всей поверхности горючей нагрузки | $t_{{max}}$ | {tmax_val:.4f} | с |"
+    )
+    report.append(
+        f"| Скорость выгорания | $\\Psi$ | {Psi_val:.4f} | кг/с |"
+    )
+    report.append(
+        f"| Полная тепловая мощность очага пожара | $Q$ | {HRRPUA_val:.4f} | кВт |"
+    )
+    report.append(
+        f"| Площадь поверхности горючей нагрузки, охватываемая пожаром | $S_{{tt}}$ | {Stt_val:.4f} | м² |"
+    )
+
+    if m_user_specified:
+        report.append(
+            f"| Полная масса горючей нагрузки (сокращённая, $m$) | $M$ | {bigM_val:.4f} | кг |"
+        )
+    else:
+        report.append(
+            f"| Полная масса горючей нагрузки, охваченной пожаром | $M$ | {bigM_val:.4f} | кг |"
+        )
     report.append("")
 
     # ===========================================================================
     # 5. ВЫВОДЫ И ОБОСНОВАНИЕ
     # ===========================================================================
     report.append("## **5. Выводы и обоснование**\n")
-    report.append("Расчёт параметров пожара выполнен в соответствии с **Приложением 1 Методики 1140**, регламентирующим порядок определения времени блокирования путей эвакуации опасными факторами пожара.\n")
-    report.append(f"На основе введённых пользователем исходных данных (коэффициент $k = {safe_convert_to_float(k):.2f}$, площадь помещения $F_{{пом}} = {safe_convert_to_float(Fpom):.2f}$ м², линейная скорость распространения пламени $v = {safe_convert_to_float(v):.4f}$ м/с, удельная массовая скорость выгорания $\\psi_{{уд}} = {safe_convert_to_float(psi_ud):.4f}$ кг/(с·м²)) рассчитаны ключевые параметры развития пожара:\n")
-    report.append(f"* **Время охвата пожаром всей поверхности** $t_{{max}} = {safe_convert_to_float(tmax):.4f}$ с — определяет момент, когда вся горючая нагрузка в помещении оказывается охваченной пламенем;\n")
-    report.append(f"* **Скорость выгорания** $\\Psi = {safe_convert_to_float(Psi):.4f}$ кг/с — характеризует интенсивность расхода горючей нагрузки;\n")
-    report.append(f"* **Полная тепловая мощность очага пожара** $Q = {safe_convert_to_float(HRRPUA):.4f}$ кВт — определяет энерговклад пожара в формирование опасных факторов;\n")
-    report.append(f"* **Площадь поверхности горючей нагрузки** $S_{{tt}} = {safe_convert_to_float(Stt):.4f}$ м² — площадь, охватываемая пожаром за время $t_{{max}}$;\n")
-    report.append(f"* **Полная масса горючей нагрузки** $M = {safe_convert_to_float(bigM):.4f}$ кг — масса горючего вещества, вовлечённого в горение.\n")
+    report.append(
+        "Расчёт параметров развития пожара выполнен в соответствии с требованиями "
+        "Приложения 1 Методики 1140, регламентирующего порядок определения времени "
+        "блокирования путей эвакуации опасными факторами пожара. Используемая "
+        "математическая модель описывает круговое распространение пламени по "
+        "поверхности твёрдой горючей нагрузки, при котором площадь горения "
+        "нарастает пропорционально квадрату времени до момента полного охвата "
+        "горючей нагрузки.\n"
+    )
 
-    if safe_convert_to_float(m) > 0:
-        report.append(f"\nВ расчёте учтена сокращённая масса горючей нагрузки $m = {safe_convert_to_float(m):.2f}$ кг, что соответствует компенсирующим мероприятиям, направленным на сокращение горючей нагрузки в очаговой зоне.\n")
+    if t_user_specified and m_user_specified:
+        report.append(
+            f"При заданных пользователем времени развития пожара $t = {t_val:.2f}$ с "
+            f"и сокращённой массе горючей нагрузки $m = {m_val:.2f}$ кг, "
+            f"отражающей результаты компенсирующих мероприятий по уменьшению "
+            f"пожарной нагрузки в очаговой зоне, расчёт показал, что время охвата "
+            f"поверхности горючей нагрузки пламенем составляет {tmax_val:.4f} с, "
+            f"скорость выгорания при этом равна {Psi_val:.4f} кг/с, а полная "
+            f"тепловая мощность очага достигает {HRRPUA_val:.4f} кВт.\n"
+        )
+    elif t_user_specified:
+        report.append(
+            f"При заданном пользователем времени развития пожара $t = {t_val:.2f}$ с "
+            f"расчёт показал, что за это время пламя, распространяясь со скоростью "
+            f"{v_val:.4f} м/с, охватывает поверхность горючей нагрузки площадью "
+            f"{Stt_val:.4f} м². Скорость выгорания к моменту полного охвата "
+            f"достигает {Psi_val:.4f} кг/с, а полная тепловая мощность очага "
+            f"составляет {HRRPUA_val:.4f} кВт.\n"
+        )
+    elif m_user_specified:
+        report.append(
+            f"При расчётном времени охвата $t_{{max}} = {tmax_val:.4f}$ с "
+            f"и заданной пользователем сокращённой массе горючей нагрузки "
+            f"$m = {m_val:.2f}$ кг скорость выгорания составляет {Psi_val:.4f} кг/с, "
+            f"что при теплоте сгорания, принятой из файла HOC, и коэффициенте "
+            f"полноты сгорания $\\eta = 0.93$ даёт полную тепловую мощность "
+            f"очага {HRRPUA_val:.4f} кВт.\n"
+        )
+    else:
+        report.append(
+            f"На основе введённых исходных данных – коэффициента отношения площади "
+            f"$k = {k_val:.2f}$, площади помещения $F_{{пом}} = {Fpom_val:.2f}$ м², "
+            f"линейной скорости распространения пламени $v = {v_val:.4f}$ м/с "
+            f"и удельной массовой скорости выгорания $\\psi_{{уд}} = {psi_ud_val:.4f}$ кг/(с·м²) – "
+            f"определены ключевые параметры развития пожара: время охвата поверхности "
+            f"горючей нагрузки составило {tmax_val:.4f} с, скорость выгорания "
+            f"достигла {Psi_val:.4f} кг/с, полная тепловая мощность очага – "
+            f"{HRRPUA_val:.4f} кВт.\n"
+        )
 
-    report.append("Полученные значения могут быть использованы для:\n")
-    report.append("* оценки времени блокирования путей эвакуации опасными факторами пожара;\n")
-    report.append("* определения необходимых параметров систем противопожарной защиты;\n")
-    report.append("* верификации численных моделей в программах полей (FDS и др.).\n")
+    report.append(
+        "Полученные значения служат основой для оценки времени блокирования "
+        "путей эвакуации опасными факторами пожара, определения необходимых "
+        "параметров систем противопожарной защиты, а также верификации "
+        "численных моделей в программных комплексах полевого типа, таких как FDS.\n"
+    )
 
     # ===========================================================================
     # ПОДПИСЬ
@@ -1160,4 +1421,60 @@ def export_report_docx(app_instance, k, Fpom, v, psi_ud, m, t, tmax, Psi, Stt, b
             QMessageBox.critical(
                 app_instance, "Ошибка экспорта",
                 f"Не удалось сохранить отчёт DOCX: {e}")
+
+
+def generate_ramp_aupt_lines(t_ramp: float, t_aupt: float, t_user: float, t_max_val: float, n_pts: int = 100) -> list:
+    """
+    Генерирует строки RAMP_CALC для FDS с учётом сработки АУПТ.
+
+    До t_АУПТ: F = (t / t_ramp)^2  (квадратичный рост, как обычно)
+    После t_АУПТ: F = (t / t_ramp)^2 / 2  (квадратичный рост с половинным коэффициентом)
+
+    Если t_user > t_max_val, добавляется точка плато с F = 0.5.
+
+    Args:
+        t_ramp: Время нормировки RAMP (обычно min(t_user, t_max) или t_max)
+        t_aupt: Время сработки АУПТ (секунды)
+        t_user: Пользовательское время развития пожара
+        t_max_val: Расчётное время tmax
+        n_pts: Количество точек дискретизации (по умолчанию 100)
+
+    Returns:
+        Список строк &RAMP для вставки в .fds файл
+    """
+    ramp_lines = ["\n&RAMP ID='RAMP_CALC', T=0.0, F=0.0 /\n"]
+
+    # Определяем максимальное время для генерации точек
+    t_end = max(t_user, t_ramp) if t_user > 0 else t_ramp
+
+    # Флаг для отслеживания, прошла ли уже точка t_aupt
+    aupt_passed = False
+
+    for i in range(1, n_pts + 1):
+        t_i = t_end * i / n_pts
+
+        if t_i <= t_aupt:
+            # До АУПТ: обычный квадратичный рост
+            f_i = (t_i / t_ramp) ** 2
+            ramp_lines.append(f"&RAMP ID='RAMP_CALC', T={t_i:.4f}, F={f_i:.6f} /\n")
+        else:
+            # После АУПТ: квадратичный рост с половинным коэффициентом
+            if not aupt_passed:
+                # Добавляем точку на t_aupt с полным значением и сразу после с половинным
+                f_aupt_before = (t_aupt / t_ramp) ** 2
+                f_aupt_after = f_aupt_before / 2
+                ramp_lines.append(f"&RAMP ID='RAMP_CALC', T={t_aupt:.4f}, F={f_aupt_before:.6f} /\n")
+                ramp_lines.append(f"&RAMP ID='RAMP_CALC', T={t_aupt + 0.0001:.4f}, F={f_aupt_after:.6f} /\n")
+                aupt_passed = True
+
+            f_i = (t_i / t_ramp) ** 2 / 2
+            ramp_lines.append(f"&RAMP ID='RAMP_CALC', T={t_i:.4f}, F={f_i:.6f} /\n")
+
+    # Явная точка плато (по формуле П1.1): при t > t_max мощность постоянна
+    # С АУПТ: плато на уровне 0.5 вместо 1.0
+    if t_user > t_max_val and t_user > t_aupt:
+        plateau_f = 0.5
+        ramp_lines.append(f"&RAMP ID='RAMP_CALC', T={t_user:.4f}, F={plateau_f:.6f} /\n")
+
+    return ramp_lines
 
